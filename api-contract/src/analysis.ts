@@ -56,11 +56,7 @@ export const analysisSchema = z.object({
   sentiment: sentimentSchema,
   sentimentScore: z.number(),
   rationale: z.string(),
-  /**
-   * Provenance. Without knowing which model and which prompt produced a row,
-   * "did our summaries get better?" is unanswerable — you cannot compare two
-   * populations you cannot distinguish.
-   */
+  /** Provenance: which model and prompt produced this result. */
   model: z.string(),
   promptVersion: z.string(),
   createdAt: z.string().datetime({ offset: true }),
@@ -100,22 +96,9 @@ export const listAnalysesQuerySchema = z.object({
 });
 export type ListAnalysesQuery = z.input<typeof listAnalysesQuerySchema>;
 
-/**
- * Counts across the *whole* feed, not the current page — this drives the mood bar,
- * which would be meaningless if it only described 20 rows.
- */
-export const sentimentBreakdownSchema = z.object({
-  positive: z.number().int().nonnegative(),
-  neutral: z.number().int().nonnegative(),
-  negative: z.number().int().nonnegative(),
-  total: z.number().int().nonnegative(),
-});
-export type SentimentBreakdown = z.infer<typeof sentimentBreakdownSchema>;
-
 export const listAnalysesResponseSchema = z.object({
   analyses: z.array(analysisSchema),
   /** Null means this is the last page. */
   nextCursor: z.string().nullable(),
-  breakdown: sentimentBreakdownSchema,
 });
 export type ListAnalysesResponse = z.infer<typeof listAnalysesResponseSchema>;

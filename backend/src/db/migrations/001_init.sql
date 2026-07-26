@@ -52,10 +52,9 @@ CREATE TABLE analyses (
 
   created_at      timestamptz NOT NULL DEFAULT now(),
 
-  -- One analysis per article per model per prompt. Re-analyzing the same article
-  -- with a new prompt version appends a row rather than overwriting history, and
-  -- pressing "Analyze" twice cannot double-charge the OpenAI account.
-  UNIQUE (article_id, model, prompt_version)
+  -- One analysis per article. Analyzing again replaces the previous result rather
+  -- than accumulating versions, so the feed can never show the same article twice.
+  UNIQUE (article_id)
 );
 
 -- Matches the feed's ORDER BY exactly, including the id tiebreaker, so keyset

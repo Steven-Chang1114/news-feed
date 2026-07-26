@@ -57,12 +57,15 @@ describe.skipIf(!TEST_DATABASE_URL)('repositories (integration)', () => {
     await sql`TRUNCATE analyses, articles`;
   });
 
-  async function seedAnalysis(overrides: { url?: string; sentiment?: 'positive' | 'neutral' | 'negative' } = {}) {
-    const input = article(overrides.url ? { url: overrides.url } : {});
-    const articleId = await articles.upsert(input, { provider: 'test' });
-    return analyses.create({
+  async function seedAnalysis(
+    overrides: { url?: string; sentiment?: 'positive' | 'neutral' | 'negative'; summary?: string } = {},
+  ) {
+    const articleId = await articles.upsert(article(overrides.url ? { url: overrides.url } : {}), {
+      provider: 'test',
+    });
+    return analyses.upsert({
       articleId,
-      summary: 'A summary',
+      summary: overrides.summary ?? 'A summary',
       sentiment: overrides.sentiment ?? 'positive',
       sentimentScore: 0.5,
       rationale: 'Because.',
@@ -76,14 +79,12 @@ describe.skipIf(!TEST_DATABASE_URL)('repositories (integration)', () => {
 
   describe('articleRepository.upsert', () => {
     it('inserts a new article and returns its id', async () => {
-      const id = await articles.upsert(article(), { provider: 'test' });
-      expect(id).toMatch(/^[0-9a-f-]{36}$/);
+      expect(await articles.upsert(article(), { provider: 'test' })).toMatch(/^[0-9a-f-]{36}$/);
     });
 
     it('returns the same id for the same url, so analyzing twice cannot duplicate', async () => {
       const first = await articles.upsert(article(), { provider: 'test' });
-      const second = await articles.upsert(article(), { provider: 'test' });
-      expect(second).toBe(first);
+      expect(await articles.upsert(article(), { provider: 'test' })).toBe(first);
     });
 
     it('refreshes metadata when a provider has corrected it', async () => {
@@ -96,6 +97,7 @@ describe.skipIf(!TEST_DATABASE_URL)('repositories (integration)', () => {
 
     it('persists null optional fields without turning them into empty strings', async () => {
       await articles.upsert(article({ description: null, imageUrl: null, publishedAt: null }), {});
+
       const [row] = await sql<{ description: string | null; publishedAt: Date | null }[]>`
         SELECT description, published_at FROM articles WHERE url = ${article().url}
       `;
@@ -104,27 +106,39 @@ describe.skipIf(!TEST_DATABASE_URL)('repositories (integration)', () => {
     });
   });
 
-  describe('analysisRepository.create', () => {
-    it('creates an analysis and reports it as newly created', async () => {
-      const { analysis, created } = await seedAnalysis();
-      expect(created).toBe(true);
+  describe('analysisRepository.upsert', () => {
+    it('stores an analysis with its article nested', async () => {
+      const analysis = await seedAnalysis();
       expect(analysis.sentiment).toBe('positive');
       expect(analysis.article.title).toBe('A headline');
     });
 
-    it('returns the existing row instead of a duplicate when the same work is requested twice', async () => {
-      const first = await seedAnalysis();
-      const second = await seedAnalysis();
+    it('replaces the previous result when an article is analyzed again', async () => {
+      const first = await seedAnalysis({ summary: 'Old summary' });
+      const second = await seedAnalysis({ summary: 'New summary', sentiment: 'negative' });
 
-      expect(second.created).toBe(false);
-      expect(second.analysis.id).toBe(first.analysis.id);
+      expect(second.id).toBe(first.id);
+      expect(second.summary).toBe('New summary');
+      expect(second.sentiment).toBe('negative');
+    });
+
+    it('never accumulates rows for the same article', async () => {
+      await seedAnalysis({ summary: 'one' });
+      await seedAnalysis({ summary: 'two' });
+      await seedAnalysis({ summary: 'three' });
 
       const [row] = await sql<{ count: number }[]>`SELECT count(*)::int AS count FROM analyses`;
       expect(row?.count).toBe(1);
     });
 
-    it('nests the article rather than exposing the foreign key', async () => {
-      const { analysis } = await seedAnalysis();
+    it('leaves created_at alone on replace, so the feed does not reorder mid-scroll', async () => {
+      const first = await seedAnalysis({ summary: 'one' });
+      const second = await seedAnalysis({ summary: 'two' });
+      expect(second.createdAt).toBe(first.createdAt);
+    });
+
+    it('nests the article rather than exposing storage internals', async () => {
+      const analysis = await seedAnalysis();
       expect(analysis.article.url).toBe(article().url);
       expect(analysis).not.toHaveProperty('articleId');
       expect(analysis).not.toHaveProperty('tokensIn');
@@ -133,7 +147,7 @@ describe.skipIf(!TEST_DATABASE_URL)('repositories (integration)', () => {
     it('refuses a sentiment outside the closed set, at the database', async () => {
       const articleId = await articles.upsert(article(), {});
       await expect(
-        analyses.create({
+        analyses.upsert({
           articleId,
           summary: 's',
           // The exact failure a language model produces: a plausible label we never allowed.
@@ -150,24 +164,49 @@ describe.skipIf(!TEST_DATABASE_URL)('repositories (integration)', () => {
     });
   });
 
-  describe('analysisRepository.findById / findByArticleUrl', () => {
-    it('finds a stored analysis by id', async () => {
-      const { analysis } = await seedAnalysis();
+  describe('analysisRepository.findById', () => {
+    it('finds a stored analysis', async () => {
+      const analysis = await seedAnalysis();
       expect((await analyses.findById(analysis.id))?.id).toBe(analysis.id);
     });
 
     it('returns null for an id that does not exist', async () => {
       expect(await analyses.findById('00000000-0000-4000-8000-000000000000')).toBeNull();
     });
+  });
 
-    it('finds by url scoped to model and prompt version', async () => {
-      const { analysis } = await seedAnalysis();
-      expect((await analyses.findByArticleUrl(article().url, MODEL, PROMPT_VERSION))?.id).toBe(analysis.id);
+  describe('analysisRepository.findIdsByUrls', () => {
+    it('maps only the urls that have been analyzed', async () => {
+      const analysis = await seedAnalysis({ url: 'https://example.com/seen' });
+
+      const found = await analyses.findIdsByUrls([
+        'https://example.com/seen',
+        'https://example.com/unseen',
+      ]);
+
+      expect(found.get('https://example.com/seen')).toBe(analysis.id);
+      expect(found.has('https://example.com/unseen')).toBe(false);
     });
 
-    it('does not match a different prompt version, so a new prompt re-analyzes', async () => {
-      await seedAnalysis();
-      expect(await analyses.findByArticleUrl(article().url, MODEL, 'v2')).toBeNull();
+    it('resolves a whole page of search results in one call', async () => {
+      for (let i = 0; i < 3; i++) await seedAnalysis({ url: `https://example.com/${i}` });
+
+      const found = await analyses.findIdsByUrls([
+        'https://example.com/0',
+        'https://example.com/1',
+        'https://example.com/2',
+        'https://example.com/never-analyzed',
+      ]);
+      expect(found.size).toBe(3);
+    });
+
+    it('short-circuits on an empty list', async () => {
+      expect((await analyses.findIdsByUrls([])).size).toBe(0);
+    });
+
+    it('ignores articles stored but never analyzed', async () => {
+      await articles.upsert(article({ url: 'https://example.com/stored-only' }), {});
+      expect((await analyses.findIdsByUrls(['https://example.com/stored-only'])).size).toBe(0);
     });
   });
 
@@ -226,64 +265,6 @@ describe.skipIf(!TEST_DATABASE_URL)('repositories (integration)', () => {
     it('treats an unparseable cursor as no cursor rather than failing', async () => {
       const { analyses: page } = await analyses.list({ limit: 10, cursor: 'garbage!!' });
       expect(page).toHaveLength(5);
-    });
-  });
-
-  describe('analysisRepository.breakdown', () => {
-    it('counts across the whole feed, not a page', async () => {
-      for (let i = 0; i < 3; i++) {
-        await seedAnalysis({ url: `https://example.com/p${i}`, sentiment: 'positive' });
-      }
-      await seedAnalysis({ url: 'https://example.com/n0', sentiment: 'negative' });
-
-      expect(await analyses.breakdown()).toEqual({ positive: 3, neutral: 0, negative: 1, total: 4 });
-    });
-
-    it('returns zeroes rather than an empty object on an empty feed', async () => {
-      expect(await analyses.breakdown()).toEqual({ positive: 0, neutral: 0, negative: 0, total: 0 });
-    });
-
-    it('returns numbers, not bigint strings', async () => {
-      await seedAnalysis();
-      expect(typeof (await analyses.breakdown()).total).toBe('number');
-    });
-  });
-
-  describe('analysisRepository.findAnalysisIdsByUrls', () => {
-    it('maps only the urls that have been analyzed', async () => {
-      const { analysis } = await seedAnalysis({ url: 'https://example.com/seen' });
-
-      const found = await analyses.findAnalysisIdsByUrls([
-        'https://example.com/seen',
-        'https://example.com/unseen',
-      ]);
-
-      expect(found.get('https://example.com/seen')).toBe(analysis.id);
-      expect(found.has('https://example.com/unseen')).toBe(false);
-    });
-
-    it('short-circuits on an empty list', async () => {
-      expect((await analyses.findAnalysisIdsByUrls([])).size).toBe(0);
-    });
-
-    it('returns the most recent analysis when an article has several', async () => {
-      const articleId = await articles.upsert(article({ url: 'https://example.com/multi' }), {});
-      const base = {
-        articleId,
-        summary: 's',
-        sentiment: 'positive' as const,
-        sentimentScore: 0.1,
-        rationale: 'r',
-        model: MODEL,
-        tokensIn: null,
-        tokensOut: null,
-        latencyMs: null,
-      };
-      await analyses.create({ ...base, promptVersion: 'v1' });
-      const newer = await analyses.create({ ...base, promptVersion: 'v2' });
-
-      const found = await analyses.findAnalysisIdsByUrls(['https://example.com/multi']);
-      expect(found.get('https://example.com/multi')).toBe(newer.analysis.id);
     });
   });
 });
