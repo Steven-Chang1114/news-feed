@@ -24,11 +24,11 @@ export type Sentiment = z.infer<typeof sentimentSchema>;
 /* -------------------------------------------------------------------------- */
 
 /**
- * Shape 1 of 3 (see the naming rules in `index.ts`): what the *model* returns.
+ * What the analyzer must return. This is the boundary between "the model said
+ * something" and "we are willing to store it".
  *
- * This is the boundary between "the model said something" and "we are willing to
- * store it". It holds no identity and no provenance, because a model produces a
- * value, not a resource — ids and timestamps are ours to assign, not its to claim.
+ * Kept separate from `analysisSchema` because it holds no identity and no
+ * provenance — it is a value produced by a model, not a resource that exists.
  */
 export const analysisOutputSchema = z.object({
   summary: z.string().min(1),
@@ -48,15 +48,7 @@ export type AnalysisOutput = z.infer<typeof analysisOutputSchema>;
 /* The stored resource                                                         */
 /* -------------------------------------------------------------------------- */
 
-/**
- * Shape 2 of 3: what the *API* returns — a stored analysis with the article it
- * describes nested inside it.
- *
- * Shape 3, `AnalysisRow`, lives in `backend/src/db` and is deliberately different:
- * it holds an `articleId` foreign key rather than a nested object, plus token
- * counts, latency and the raw provider payload. Those are operational details, and
- * the wire is not the schema.
- */
+/** A persisted analysis, joined with the article it describes. */
 export const analysisSchema = z.object({
   id: z.string().uuid(),
   article: articleSchema,

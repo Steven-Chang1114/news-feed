@@ -17,45 +17,6 @@ sentiment score, and build up a personal digest you can scan by mood.
 | Contract | Zod schemas in `api-contract/` | Server validates against them, client infers types from them — a response-shape change becomes a frontend compile error |
 | AI | OpenAI `gpt-4.1-nano`, strict Structured Outputs | A JSON Schema the model cannot violate, so malformed output is designed out rather than parsed around |
 
-### Type naming
-
-One concept usually has more than one shape, and confusing them is how a storage
-detail ends up on the wire. The name says which shape you are holding:
-
-| Name | Is | Lives in |
-| --- | --- | --- |
-| `AnalysisOutput` | what the model returns — no id, no provenance | `api-contract/` |
-| `Analysis` | what the API returns — id, nested article | `api-contract/` |
-| `AnalysisRow` | what a database row holds — FK, token counts, latency, raw payload | `backend/src/db/` |
-
-- Everything exported from `api-contract/` is a wire type. Resources take no suffix
-  (`Article`, `Analysis`); wrappers state what they are (`ListAnalysesResponse`,
-  `CreateAnalysisRequest`).
-- Row types are suffixed `Row` and are never exported from `api-contract/` — the
-  contract describes the wire, and the wire is not the schema.
-- **`Row` types never escape the repository layer.** Mapping a row to a wire type is
-  exactly what a repository is for, so an `AnalysisRow` in a route handler means a
-  boundary has leaked.
-- Model input/output is suffixed `Input` / `Output`.
-
-### Sentiment is validated three times, on purpose
-
-Sentiment is a closed set of three values, checked in the JSON Schema sent to the
-model, again in Zod when the response is parsed, and again by a Postgres `CHECK`.
-That is not the same check repeated — each layer catches something the others
-cannot see:
-
-| Layer | Does | Catches |
-| --- | --- | --- |
-| JSON Schema (strict Structured Outputs) | **Prevents** — the model cannot decode another value | the model inventing `"mixed"` |
-| Zod, at the parse boundary | **Reports** — a typed error instead of a bad value | truncated responses, refusals, a config change dropping `strict`, a fallback path that skipped the schema |
-| Postgres `CHECK` | **Guarantees** — an invariant of the data | every other writer: migrations, backfills, fixtures, a future batch job, someone in `psql` |
-
-For a deterministic input this would be redundant. The input is a language model, so
-the first layer is a third party's promise, the second is where you find out it was
-broken, and the third is the only one that holds for writers that don't run your
-application code.
-
 ### Why no ORM
 
 The query surface here is roughly eight queries. An ORM would add a dependency, a
