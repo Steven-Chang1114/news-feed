@@ -23,19 +23,6 @@ export const articleSchema = z.object({
 });
 export type Article = z.infer<typeof articleSchema>;
 
-/**
- * A search hit: an article plus whether it is already in the user's feed.
- *
- * Carrying `analysisId` on the article itself — rather than returning a separate
- * list of seen URLs — means each card knows its own state and can link straight to
- * the stored analysis. No client-side set building, and no N+1 request per result.
- */
-export const searchResultSchema = articleSchema.extend({
-  /** Non-null means this article has already been analyzed; the value links to it. */
-  analysisId: z.string().uuid().nullable(),
-});
-export type SearchResult = z.infer<typeof searchResultSchema>;
-
 /* -------------------------------------------------------------------------- */
 /* GET /api/v1/articles                                                        */
 /* -------------------------------------------------------------------------- */
@@ -58,7 +45,24 @@ export const listArticlesQuerySchema = z.object({
 /** Input type: pre-coercion, which is what a caller actually supplies. */
 export type ListArticlesQuery = z.input<typeof listArticlesQuerySchema>;
 
+/**
+ * Each article carries whether it is already in the user's feed.
+ *
+ * `analysisId` lives here rather than on `articleSchema` because `Article` is the
+ * provider shape — the news adapter has no database access, so it could never
+ * populate the field, and a nullable analysis id on every Article would make null
+ * mean both "not analyzed" and "nobody checked".
+ *
+ * Carrying it per-article, rather than returning a separate list of seen URLs,
+ * means each card knows its own state and can link straight to the stored
+ * analysis: no client-side set building, and no request per result.
+ */
 export const listArticlesResponseSchema = z.object({
-  articles: z.array(searchResultSchema),
+  articles: z.array(
+    articleSchema.extend({
+      /** Non-null means this article has already been analyzed; the value links to it. */
+      analysisId: z.string().uuid().nullable(),
+    }),
+  ),
 });
 export type ListArticlesResponse = z.infer<typeof listArticlesResponseSchema>;
