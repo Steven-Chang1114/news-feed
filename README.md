@@ -80,8 +80,8 @@ Two free-tier behaviours to be aware of, both expected rather than broken:
 ## Roadmap
 
 - [x] Workspace scaffold, tooling, local Postgres
-- [ ] API contract
-- [ ] Database schema, migrations, repositories
+- [x] API contract
+- [x] Database schema, migrations, repositories
 - [ ] GNews + OpenAI providers behind swappable interfaces
 - [ ] REST API
 - [ ] Vue 3 client
