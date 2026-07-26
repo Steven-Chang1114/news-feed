@@ -1,0 +1,19 @@
+node_modules/
+dist/
+*.local
+
+# Secrets — never commit. Use .env.example as the template.
+.env
+.env.*
+!.env.example
+
+# Logs / editor / OS
+*.log
+npm-debug.log*
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Test output
+coverage/

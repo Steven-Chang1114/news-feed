@@ -1,0 +1,27 @@
+{
+  "name": "news-feed",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Search news, summarise and score sentiment with an LLM, and build a personal digest.",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "api-contract",
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm:dev -w backend\" \"npm:dev -w frontend\"",
+    "build": "npm run build -w frontend && npm run build -w backend",
+    "start": "npm run start -w backend",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "db:migrate": "npm run db:migrate -w backend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.7.3"
+  }
+}
