@@ -120,9 +120,9 @@ would reorder rows underneath someone paginating.
 **Type naming.** One concept, three shapes:
 
 ```
-AnalysisOutput   what the model returns     no id, no provenance
-Analysis         what the API returns       id, nested article
-AnalysisRow      what a database row holds  FK, tokens, latency, raw
+AnalysisOutput           what the model returns     no id, no provenance
+Analysis                 what the API returns       output + id, article, provenance
+AnalysisWithArticleRow   what a query returns       flat, Date objects not ISO strings
 ```
 
 - Everything exported from `api-contract/` is a wire type. Resources take no suffix;
@@ -131,6 +131,13 @@ AnalysisRow      what a database row holds  FK, tokens, latency, raw
 - Repository method `foo` takes `FooParams`; it returns a contract type where one
   fits, and `FooResult` only where none does.
 - Identifiers use American spellings (`analyze`).
+
+**Reuse contract types; never restate a shape.** If a type is the contract's type,
+import it. If it is the contract's type plus fields, `extend` it. If it is a
+schema's parsed output, derive it with `z.infer`. Hand-writing a second copy of a
+shape means two places to change and one to forget. Only declare a distinct type
+where the shapes can genuinely diverge — storage rows do, because they carry `Date`
+objects and internal columns the wire never sees.
 
 **Directories** are named for the role they play: `frontend`, `backend`,
 `api-contract`.

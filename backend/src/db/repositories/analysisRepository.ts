@@ -1,4 +1,10 @@
-import type { Analysis, ListAnalysesResponse, Sentiment } from '@news-feed/api-contract';
+import type {
+  Analysis,
+  AnalysisOutput,
+  ListAnalysesResponse,
+  listAnalysesQuerySchema,
+} from '@news-feed/api-contract';
+import type { z } from 'zod';
 import type { Sql } from '../client';
 import { decodeCursor, encodeCursor } from '../cursor';
 import type { AnalysisWithArticleRow } from '../types';
@@ -11,24 +17,25 @@ import type { AnalysisWithArticleRow } from '../types';
  * layer (`AnalysisOutput` is what the LLM returns), and these are arguments to a
  * database call.
  */
-export interface UpsertAnalysisParams {
+export interface UpsertAnalysisParams extends AnalysisOutput {
   articleId: string;
-  summary: string;
-  sentiment: Sentiment;
-  sentimentScore: number;
-  rationale: string;
+  /** Provenance, recorded alongside the result. */
   model: string;
   promptVersion: string;
+  /** Cost and latency observability. Null when a provider omits usage data. */
   tokensIn: number | null;
   tokensOut: number | null;
   latencyMs: number | null;
 }
 
-export interface ListAnalysesParams {
-  limit: number;
-  cursor?: string | undefined;
-  sentiment?: Sentiment | undefined;
-}
+/**
+ * Derived from the endpoint's schema rather than restated, so adding a filter
+ * changes one place. This is the schema's *output* type — post-coercion, with
+ * defaults applied — which is exactly what reaches a repository.
+ *
+ * Split them if the query ever gains a parameter storage does not handle.
+ */
+export type ListAnalysesParams = z.infer<typeof listAnalysesQuerySchema>;
 
 /**
  * Four methods, one per thing the product does: analyze an article, open one,

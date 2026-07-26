@@ -48,14 +48,17 @@ export type AnalysisOutput = z.infer<typeof analysisOutputSchema>;
 /* The stored resource                                                         */
 /* -------------------------------------------------------------------------- */
 
-/** A persisted analysis, joined with the article it describes. */
-export const analysisSchema = z.object({
+/**
+ * A persisted analysis: the model's output, plus the identity, provenance and
+ * article that make it a resource rather than a value.
+ *
+ * Extends `analysisOutputSchema` rather than restating its four fields, so the
+ * relationship is stated once and the stored form inherits the same constraints
+ * the model output is held to.
+ */
+export const analysisSchema = analysisOutputSchema.extend({
   id: z.string().uuid(),
   article: articleSchema,
-  summary: z.string(),
-  sentiment: sentimentSchema,
-  sentimentScore: z.number(),
-  rationale: z.string(),
   /** Provenance: which model and prompt produced this result. */
   model: z.string(),
   promptVersion: z.string(),
