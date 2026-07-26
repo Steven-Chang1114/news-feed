@@ -3,7 +3,15 @@ import type { Sql } from '../client';
 import { decodeCursor, encodeCursor } from '../cursor';
 import type { AnalysisWithArticleRow } from '../types';
 
-export interface AnalysisInput {
+/**
+ * Repository parameter and return types follow one rule: method `foo` takes
+ * `FooParams` and returns either a contract type or `FooResult`.
+ *
+ * Deliberately not `AnalysisInput` — `Input`/`Output` is reserved for the model
+ * layer (`AnalysisOutput` is what the LLM returns), and these are arguments to a
+ * database call.
+ */
+export interface UpsertAnalysisParams {
   articleId: string;
   summary: string;
   sentiment: Sentiment;
@@ -16,7 +24,7 @@ export interface AnalysisInput {
   latencyMs: number | null;
 }
 
-export interface ListAnalysesOptions {
+export interface ListAnalysesParams {
   limit: number;
   cursor?: string | undefined;
   sentiment?: Sentiment | undefined;
@@ -33,13 +41,13 @@ export interface ListAnalysesResult {
  */
 export interface AnalysisRepository {
   /** Stores the analysis, replacing any previous one for the same article. */
-  upsert(input: AnalysisInput): Promise<Analysis>;
+  upsert(params: UpsertAnalysisParams): Promise<Analysis>;
   /** Backs `GET /analyses/:id`, and reads back what `upsert` just wrote. */
   findById(id: string): Promise<Analysis | null>;
   /** Article URL -> analysis id, for every URL already analyzed. One query for a whole page of search results. */
   findIdsByUrls(urls: string[]): Promise<Map<string, string>>;
   /** Backs `GET /analyses`. */
-  list(options: ListAnalysesOptions): Promise<ListAnalysesResult>;
+  list(params: ListAnalysesParams): Promise<ListAnalysesResult>;
 }
 
 /** Storage shape -> wire shape. The one place rows are allowed to become contract types. */
