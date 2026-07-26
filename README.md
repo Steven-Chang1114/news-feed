@@ -43,9 +43,9 @@ Requires Node 22+ and Docker (for local Postgres).
 ```bash
 npm install
 cp .env.example .env   # then fill in GNEWS_API_KEY and OPENAI_API_KEY
-docker compose up -d   # local Postgres on :5432
+docker compose up -d --wait   # local Postgres on :5432; --wait blocks until it accepts connections
 npm run db:migrate
-npm run dev            # backend on :3000, frontend on :5173
+npm run dev                   # backend on :3000, frontend on :5173
 ```
 
 Get a free news API key at [gnews.io](https://gnews.io) (100 requests/day).
@@ -61,17 +61,11 @@ backend/        Express 5 API, providers, repositories, migrations
 frontend/       Vue 3 single-page app
 ```
 
-Every directory is named for what it holds or the role it plays, never for who uses
-it. `api-contract` rather than `shared`, because a name describing *audience* can't
-tell you what doesn't belong — which is how "shared" folders accumulate stray
-helpers. `frontend`/`backend` rather than `web`/`server`, because those describe
-implementation detail and read ambiguously in a project where everything is web.
-
 ## Hosting
 
 | Piece | Where | Notes |
 | --- | --- | --- |
-| Web + API | Single Render service | Express serves the built Vue app, so one origin and no CORS in production |
+| Frontend + backend | Single Render service | Express serves the built Vue app, so one origin and no CORS in production |
 | Database | Neon | Free tier is permanent. Render's free Postgres is deleted 30 days after creation, which would break the app with no warning |
 
 Two free-tier behaviours to be aware of, both expected rather than broken:
@@ -86,7 +80,7 @@ Two free-tier behaviours to be aware of, both expected rather than broken:
 ## Roadmap
 
 - [x] Workspace scaffold, tooling, local Postgres
-- [ ] Shared API contract
+- [ ] API contract
 - [ ] Database schema, migrations, repositories
 - [ ] GNews + OpenAI providers behind swappable interfaces
 - [ ] REST API
