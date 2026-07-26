@@ -9,16 +9,16 @@
   },
   "workspaces": [
     "api-contract",
-    "server",
-    "web"
+    "backend",
+    "frontend"
   ],
   "scripts": {
-    "dev": "concurrently -n server,web -c blue,green \"npm:dev -w server\" \"npm:dev -w web\"",
-    "build": "npm run build -w web && npm run build -w server",
-    "start": "npm run start -w server",
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm:dev -w backend\" \"npm:dev -w frontend\"",
+    "build": "npm run build -w frontend && npm run build -w backend",
+    "start": "npm run start -w backend",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "db:migrate": "npm run db:migrate -w server"
+    "db:migrate": "npm run db:migrate -w backend"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",

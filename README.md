@@ -23,7 +23,7 @@ The query surface here is roughly eight queries. An ORM would add a dependency, 
 build step, and a layer of indirection in exchange for type inference we can get
 most of by other means. Instead:
 
-- All SQL lives in `server/src/db/repositories/` — never in a route handler or service.
+- All SQL lives in `backend/src/db/repositories/` — never in a route handler or service.
   Services depend on a repository *interface*, which is what keeps them testable.
 - `postgres.js` tagged templates are parameterised by the driver (`` sql`WHERE id = ${id}` ``
   sends `$1`), so injection is prevented structurally, not by discipline.
@@ -45,7 +45,7 @@ npm install
 cp .env.example .env   # then fill in GNEWS_API_KEY and OPENAI_API_KEY
 docker compose up -d   # local Postgres on :5432
 npm run db:migrate
-npm run dev            # API on :3000, web on :5173
+npm run dev            # backend on :3000, frontend on :5173
 ```
 
 Get a free news API key at [gnews.io](https://gnews.io) (100 requests/day).
@@ -57,13 +57,15 @@ Get a free news API key at [gnews.io](https://gnews.io) (100 requests/day).
 
 ```
 api-contract/   Zod schemas defining every payload that crosses the network
-server/         Express 5 API, providers, repositories, migrations
-web/            Vue 3 single-page app
+backend/        Express 5 API, providers, repositories, migrations
+frontend/       Vue 3 single-page app
 ```
 
-`api-contract` rather than `shared`: a name describing *what something is* tells you
-what doesn't belong in it. A name describing *who uses it* doesn't, which is how
-"shared" folders accumulate unrelated helpers.
+Every directory is named for what it holds or the role it plays, never for who uses
+it. `api-contract` rather than `shared`, because a name describing *audience* can't
+tell you what doesn't belong — which is how "shared" folders accumulate stray
+helpers. `frontend`/`backend` rather than `web`/`server`, because those describe
+implementation detail and read ambiguously in a project where everything is web.
 
 ## Hosting
 
