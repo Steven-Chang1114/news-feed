@@ -14,7 +14,7 @@ sentiment score, and build up a personal digest you can scan by mood.
 | Backend | Node 22 + Express 5 + TypeScript | Express 5 propagates async errors to the error middleware natively, which removes the `asyncHandler` wrapper Express 4 needed |
 | Database | PostgreSQL | Enforces a closed sentiment set at the storage layer, `jsonb` for raw provider payloads, `RETURNING` for single-round-trip upserts |
 | DB access | `postgres.js` + hand-written SQL | Small query surface; no abstraction between the code and the query plan. All SQL is confined to the repository layer |
-| Contract | Zod schemas in `shared/` | Server validates against them, client infers types from them — a response-shape change becomes a frontend compile error |
+| Contract | Zod schemas in `api-contract/` | Server validates against them, client infers types from them — a response-shape change becomes a frontend compile error |
 | AI | OpenAI `gpt-4.1-nano`, strict Structured Outputs | A JSON Schema the model cannot violate, so malformed output is designed out rather than parsed around |
 
 ### Why no ORM
@@ -56,10 +56,30 @@ Get a free news API key at [gnews.io](https://gnews.io) (100 requests/day).
 ## Layout
 
 ```
-shared/   Zod schemas — the API contract, imported by both sides
-server/   Express 5 API, providers, repositories, migrations
-web/      Vue 3 single-page app
+api-contract/   Zod schemas defining every payload that crosses the network
+server/         Express 5 API, providers, repositories, migrations
+web/            Vue 3 single-page app
 ```
+
+`api-contract` rather than `shared`: a name describing *what something is* tells you
+what doesn't belong in it. A name describing *who uses it* doesn't, which is how
+"shared" folders accumulate unrelated helpers.
+
+## Hosting
+
+| Piece | Where | Notes |
+| --- | --- | --- |
+| Web + API | Single Render service | Express serves the built Vue app, so one origin and no CORS in production |
+| Database | Neon | Free tier is permanent. Render's free Postgres is deleted 30 days after creation, which would break the app with no warning |
+
+Two free-tier behaviours to be aware of, both expected rather than broken:
+
+- Render spins a free service down after ~15 minutes idle, so the first request
+  after a quiet period can take 30–60s.
+- Neon suspends compute after 5 minutes idle and bills 100 compute-hours/month.
+  The Postgres client sets `idle_timeout` so connections don't pin the database
+  awake — without it, an always-open pool would exhaust the monthly allowance in
+  about four days.
 
 ## Roadmap
 
