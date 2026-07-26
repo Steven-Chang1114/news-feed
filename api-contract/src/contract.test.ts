@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { articleSchema } from './article';
-import { analysisOutputSchema, analysisPreviewSchema, listAnalysesQuerySchema } from './analysis';
-import { listArticlesQuerySchema, searchResultSchema } from './search';
+import { articleSchema, listArticlesQuerySchema } from './article';
+import { analysisOutputSchema, listAnalysesQuerySchema } from './analysis';
 import { errorResponseSchema } from './error';
 
 /**
@@ -40,36 +39,6 @@ describe('articleSchema', () => {
     // provider adapter must map missing fields to null explicitly.
     const { description, ...withoutDescription } = validArticle;
     expect(articleSchema.safeParse(withoutDescription).success).toBe(false);
-  });
-});
-
-describe('searchResultSchema', () => {
-  it('accepts an unanalyzed result with analysis explicitly null', () => {
-    const parsed = searchResultSchema.parse({ ...validArticle, analysis: null });
-    expect(parsed.analysis).toBeNull();
-  });
-
-  it('accepts an analyzed result carrying a preview', () => {
-    const parsed = searchResultSchema.parse({
-      ...validArticle,
-      analysis: {
-        id: '00000000-0000-4000-8000-000000000000',
-        sentiment: 'negative',
-        sentimentScore: -0.6,
-        createdAt: '2026-07-26T10:00:00Z',
-      },
-    });
-    expect(parsed.analysis?.sentiment).toBe('negative');
-  });
-
-  it('requires analysis to be present, so "not analyzed" cannot be confused with "not checked"', () => {
-    // The field is mandatory-but-nullable on purpose: a response that simply omits
-    // it is a server bug, and should fail loudly rather than render as "unanalyzed".
-    expect(searchResultSchema.safeParse(validArticle).success).toBe(false);
-  });
-
-  it('does not carry a nested article, which would duplicate the one it is attached to', () => {
-    expect('article' in analysisPreviewSchema.shape).toBe(false);
   });
 });
 

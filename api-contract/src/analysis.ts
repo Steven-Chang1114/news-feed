@@ -48,26 +48,6 @@ export type AnalysisOutput = z.infer<typeof analysisOutputSchema>;
 /* The stored resource                                                         */
 /* -------------------------------------------------------------------------- */
 
-/**
- * A small view of a stored analysis, for places that are showing an *article* and
- * need to say something about its analysis — currently the search results.
- *
- * Notably it does **not** contain the article. `analysisSchema` embeds one, so
- * nesting a full analysis under an article would either cycle
- * (Article -> Analysis -> Article -> ...) or duplicate the article in a single
- * payload, giving one fact two representations that can disagree.
- *
- * It carries sentiment as well as the id so a search card can render
- * "analyzed · negative" without a second request.
- */
-export const analysisPreviewSchema = z.object({
-  id: z.string().uuid(),
-  sentiment: sentimentSchema,
-  sentimentScore: z.number(),
-  createdAt: z.string().datetime({ offset: true }),
-});
-export type AnalysisPreview = z.infer<typeof analysisPreviewSchema>;
-
 /** A persisted analysis, joined with the article it describes. */
 export const analysisSchema = z.object({
   id: z.string().uuid(),
