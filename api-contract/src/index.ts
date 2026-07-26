@@ -16,7 +16,16 @@
  *   create<Resource>Request  body of a POST
  *
  * Identifiers use American spellings ("analyze") throughout.
+ *
+ * Modules form a deliberate DAG, since Zod schemas are built at module-evaluation
+ * time and a circular import would yield an `undefined` schema:
+ *
+ *   article   provider shape only, no dependencies
+ *   analysis  depends on article
+ *   search    depends on article and analysis
+ *   error     no dependencies
  */
 export * from './article';
 export * from './analysis';
+export * from './search';
 export * from './error';
