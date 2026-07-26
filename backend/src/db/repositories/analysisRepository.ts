@@ -1,4 +1,4 @@
-import type { Analysis, Sentiment } from '@news-feed/api-contract';
+import type { Analysis, ListAnalysesResponse, Sentiment } from '@news-feed/api-contract';
 import type { Sql } from '../client';
 import { decodeCursor, encodeCursor } from '../cursor';
 import type { AnalysisWithArticleRow } from '../types';
@@ -30,11 +30,6 @@ export interface ListAnalysesParams {
   sentiment?: Sentiment | undefined;
 }
 
-export interface ListAnalysesResult {
-  analyses: Analysis[];
-  nextCursor: string | null;
-}
-
 /**
  * Four methods, one per thing the product does: analyze an article, open one,
  * mark up search results, and read the feed.
@@ -46,8 +41,13 @@ export interface AnalysisRepository {
   findById(id: string): Promise<Analysis | null>;
   /** Article URL -> analysis id, for every URL already analyzed. One query for a whole page of search results. */
   findIdsByUrls(urls: string[]): Promise<Map<string, string>>;
-  /** Backs `GET /analyses`. */
-  list(params: ListAnalysesParams): Promise<ListAnalysesResult>;
+  /**
+   * Backs `GET /analyses`. Returns the contract's response type directly rather
+   * than a repository-specific twin: the shapes are identical, and this layer
+   * already returns contract types elsewhere. If the response ever gains a field
+   * storage does not produce, that is the moment to split them.
+   */
+  list(params: ListAnalysesParams): Promise<ListAnalysesResponse>;
 }
 
 /** Storage shape -> wire shape. The one place rows are allowed to become contract types. */
