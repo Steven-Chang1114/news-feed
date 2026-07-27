@@ -46,20 +46,21 @@ export type ListArticlesQuery = z.input<typeof listArticlesQuerySchema>;
 export type ParsedListArticlesQuery = z.output<typeof listArticlesQuerySchema>;
 
 /**
- * Each article carries whether it is already in the user's feed, so a card knows
- * its own state and can link straight to the stored analysis.
+ * An article plus whether it is already in the user's feed, so a card knows its own
+ * state and can link straight to the stored analysis.
  *
  * `analysisId` lives here rather than on `articleSchema` because `Article` is the
- * provider shape and the news adapter has no database access. Confined to this
- * response, `null` means "not analyzed"; on `Article` it could also mean "nobody
+ * provider shape and the news adapter has no database access. Confined to a search
+ * result, `null` means "not analyzed"; on `Article` it could also mean "nobody
  * checked".
  */
+export const searchResultSchema = articleSchema.extend({
+  /** Non-null means this article has already been analyzed; the value links to it. */
+  analysisId: z.string().uuid().nullable(),
+});
+export type SearchResult = z.infer<typeof searchResultSchema>;
+
 export const listArticlesResponseSchema = z.object({
-  articles: z.array(
-    articleSchema.extend({
-      /** Non-null means this article has already been analyzed; the value links to it. */
-      analysisId: z.string().uuid().nullable(),
-    }),
-  ),
+  results: z.array(searchResultSchema),
 });
 export type ListArticlesResponse = z.infer<typeof listArticlesResponseSchema>;

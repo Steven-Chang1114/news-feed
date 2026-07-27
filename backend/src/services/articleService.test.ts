@@ -28,17 +28,17 @@ describe('createArticleService', () => {
   it('marks a result that is already in the feed', async () => {
     const { service } = build([article('https://a.test')], new Map([['https://a.test', 'analysis-1']]));
 
-    const { articles } = await service.search(query);
+    const { results } = await service.search(query);
 
-    expect(articles[0]?.analysisId).toBe('analysis-1');
+    expect(results[0]?.analysisId).toBe('analysis-1');
   });
 
   it('marks an unanalyzed result as null rather than omitting the field', async () => {
     const { service } = build([article('https://a.test')], new Map());
 
-    const { articles } = await service.search(query);
+    const { results } = await service.search(query);
 
-    expect(articles[0]).toHaveProperty('analysisId', null);
+    expect(results[0]).toHaveProperty('analysisId', null);
   });
 
   it('resolves a whole page in one lookup rather than one per result', async () => {
@@ -62,6 +62,6 @@ describe('createArticleService', () => {
   it('returns nothing when the provider finds nothing', async () => {
     const { service } = build([], new Map());
 
-    expect((await service.search(query)).articles).toEqual([]);
+    expect((await service.search(query)).results).toEqual([]);
   });
 });

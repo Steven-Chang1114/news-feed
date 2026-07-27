@@ -85,5 +85,5 @@ Two free-tier behaviours to be aware of, both expected rather than broken:
 - [x] Database schema, migrations, repositories
 - [x] GNews + OpenAI providers behind swappable interfaces
 - [x] REST API
-- [ ] Vue 3 client
+- [x] Vue 3 client
 - [ ] Deploy + architecture notes

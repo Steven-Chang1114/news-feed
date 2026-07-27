@@ -96,6 +96,11 @@ through `tx`, and provider calls stay outside it.
 **Third parties** sit behind an interface in `backend/src/providers/`, with the
 vendor SDK confined to a single adapter file, so tests need no key and no network.
 
+**Vue components** are written `<template>`, then `<script setup lang="ts">`, then
+`<style scoped>`, in that order. Styles belonging to one component live in its
+scoped block; `styles.css` holds only the tokens, the resets, and the primitives
+more than one component renders.
+
 ## Comments
 
 Comments carry the reasoning for anything non-obvious — this codebase has to be
