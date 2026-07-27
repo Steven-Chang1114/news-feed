@@ -3,9 +3,8 @@
 Search recent news, run an LLM over an article you pick to get a summary and a
 sentiment score, and build up a personal digest you can scan by mood.
 
-> **Status:** in progress. This repo is being built as a sequence of reviewable PRs —
-> see [Roadmap](#roadmap). Full scope, user flow, API and data model are in
-> [docs/PLAN.md](docs/PLAN.md).
+> Built as a sequence of reviewable PRs. Full scope, user flow, API and data model
+> are in [docs/PLAN.md](docs/PLAN.md).
 
 ## Stack
 
@@ -78,6 +77,34 @@ Two free-tier behaviours to be aware of, both expected rather than broken:
   awake — without it, an always-open pool would exhaust the monthly allowance in
   about four days.
 
+### Deploying
+
+1. Create a Postgres database at [neon.com](https://neon.com) and copy its
+   connection string. Use the direct endpoint rather than the `-pooler` one: this is
+   a long-lived server with its own pool.
+2. In [Render](https://render.com), create a Blueprint from this repository.
+   `render.yaml` describes the service; the build runs `npm ci && npm run build` and
+   the start command applies migrations before serving.
+3. Set three environment variables in the Render dashboard, where they are stored
+   encrypted: `DATABASE_URL`, `GNEWS_API_KEY`, `OPENAI_API_KEY`. They are marked
+   `sync: false` in the blueprint precisely so they never live in the repository.
+
+`npm run build` produces `frontend/dist` and `backend/dist`; `npm start` migrates,
+then serves the API and that built client from one process. Running those two
+commands locally reproduces the deployed setup exactly.
+
+## What I would do next
+
+- **Cache search results server-side** by `(q, lang, limit)`. The free news tier
+  allows 100 requests a day, and repeat searches currently spend one each.
+- **Evaluate the prompt.** Every analysis stores `model`, `prompt_version`, token
+  counts and latency, which is the data an eval needs; what is missing is a labelled
+  set to score changes against.
+- **Rate-limit `POST /analyses`.** Nothing currently stops a script from spending
+  the OpenAI budget.
+- **Structured logging with the request id.** It is already generated and returned
+  in every error; it is not yet written to a log line.
+
 ## Roadmap
 
 - [x] Workspace scaffold, tooling, local Postgres
@@ -86,4 +113,4 @@ Two free-tier behaviours to be aware of, both expected rather than broken:
 - [x] GNews + OpenAI providers behind swappable interfaces
 - [x] REST API
 - [x] Vue 3 client
-- [ ] Deploy + architecture notes
+- [x] Deploy + architecture notes
