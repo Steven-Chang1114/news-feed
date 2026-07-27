@@ -21,15 +21,15 @@ below: small, boring and navigable beats clever.
 
 | # | Feature | Status |
 | --- | --- | --- |
-| 1 | Search recent news by keyword | provider done, needs route |
-| 2 | See at a glance which results are already analyzed | contract + repo done |
-| 3 | Analyze an article — LLM summary, sentiment label and score | provider done, needs route |
-| 4 | Re-analyze an article; the new result replaces the old one | repo done |
-| 5 | Feed listing every analyzed article with its sentiment label, newest first | repo done |
+| 1 | Search recent news by keyword | API done, needs UI |
+| 2 | See at a glance which results are already analyzed | API done, needs UI |
+| 3 | Analyze an article — LLM summary, sentiment label and score | API done, needs UI |
+| 4 | Re-analyze an article; the new result replaces the old one | API done, needs UI |
+| 5 | Feed listing every analyzed article with its sentiment label, newest first | API done, needs UI |
 | 6 | Click a feed row to reveal its summary | PR 6 |
-| 7 | Filter the feed by sentiment | repo done |
-| 8 | Page through the feed | repo done |
-| 9 | Remove an analysis from the feed | repo done |
+| 7 | Filter the feed by sentiment | API done, needs UI |
+| 8 | Page through the feed | API done, needs UI |
+| 9 | Remove an analysis from the feed | API done, needs UI |
 
 ### Explicitly out of scope
 
@@ -152,7 +152,7 @@ Seven PRs, each independently reviewable.
 | 1 | `chore/scaffold-workspace` | Workspaces, tsconfig, Docker Postgres, secrets handling | merged |
 | 2 | `feat/api-contract` | Zod schemas for every payload | merged |
 | 3 | `feat/db-layer` | Schema, migrations, repositories | merged |
-| 4 | `feat/providers` | GNews + OpenAI behind swappable interfaces | in review |
-| 5 | `feat/rest-api` | Express 5, routes, middleware, error envelope | |
+| 4 | `feat/providers` | GNews + OpenAI behind swappable interfaces | merged |
+| 5 | `feat/rest-api` | Express 5, routes, middleware, error envelope | in review |
 | 6 | `feat/web-client` | Vue 3 SPA | |
 | 7 | `chore/deploy` | Serve SPA from Express, Neon + Render, README | |

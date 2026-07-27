@@ -4,13 +4,19 @@ import { z } from 'zod';
  * Environment is validated once, at boot, and the process refuses to start if it is
  * wrong. A misconfigured deploy should fail loudly in seconds, not silently at 3am
  * when the first request touches an undefined value.
- *
- * Only variables the code reads are listed, so `db:migrate` never fails for want of
- * an OpenAI key it will not use.
  */
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  PORT: z.coerce.number().int().positive().default(3000),
+  /** Only used in development; in production the SPA is served by this process. */
+  CORS_ORIGIN: z.string().default('http://localhost:5173'),
+
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
+
+  GNEWS_API_KEY: z.string().min(1, 'GNEWS_API_KEY is required — free key at https://gnews.io'),
+
+  OPENAI_API_KEY: z.string().min(1, 'OPENAI_API_KEY is required'),
+  OPENAI_MODEL: z.string().default('gpt-4.1-nano'),
 });
 
 function loadEnv() {

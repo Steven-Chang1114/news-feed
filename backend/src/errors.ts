@@ -26,6 +26,16 @@ export class AppError extends Error {
   }
 }
 
+/** The request failed schema validation. `details` carries the field-level problems. */
+export function validationError(details: unknown): AppError {
+  return new AppError('VALIDATION_ERROR', 'The request is invalid', 400, { details });
+}
+
+/** No such resource. */
+export function notFoundError(message: string): AppError {
+  return new AppError('NOT_FOUND', message, 404);
+}
+
 /** A third party failed, timed out, or answered in a shape we cannot use. */
 export function upstreamError(message: string, cause?: unknown): AppError {
   return new AppError('UPSTREAM_ERROR', message, 502, { cause });
