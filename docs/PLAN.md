@@ -121,7 +121,7 @@ its window.
 
 ```
 id  url(unique)  title  description  content  image_url  source_name
-published_at  raw(jsonb)  created_at  updated_at
+published_at  created_at  updated_at
 ```
 
 **`analyses`** — one per article, `UNIQUE (article_id)`. Re-analyzing replaces.

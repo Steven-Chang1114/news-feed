@@ -22,7 +22,7 @@ export function createAnalysisService(sql: Sql, analyzer: Analyzer): AnalysisSer
       const result = await analyzer.analyze(article);
 
       return sql.begin(async (tx) => {
-        const articleId = await createArticleRepository(tx).upsert(article, article);
+        const articleId = await createArticleRepository(tx).upsert(article);
 
         return createAnalysisRepository(tx).upsert({
           articleId,

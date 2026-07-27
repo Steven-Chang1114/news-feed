@@ -18,9 +18,6 @@ CREATE TABLE articles (
   source_name   text,
   published_at  timestamptz,
 
-  -- The provider payload as received, so a mapping bug can be corrected by
-  -- reprocessing rather than by re-fetching against a 100/day quota.
-  raw           jsonb NOT NULL,
 
   created_at    timestamptz NOT NULL DEFAULT now(),
   updated_at    timestamptz NOT NULL DEFAULT now()
