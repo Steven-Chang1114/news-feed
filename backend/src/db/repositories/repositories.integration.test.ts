@@ -6,15 +6,13 @@ import { createAnalysisRepository, type AnalysisRepository } from './analysisRep
 import { createArticleRepository, type ArticleRepository } from './articleRepository';
 
 /**
- * The safety net for hand-written SQL.
+ * Executes every repository query against a real migrated database.
  *
  * Row types are claims, not compile-time checks — rename a column and TypeScript
- * stays happy. This suite executes every repository query against a real migrated
- * database, so a schema/type mismatch fails here instead of in production.
+ * stays happy — so this suite is what turns schema drift into a failing build.
  *
- * It requires TEST_DATABASE_URL rather than reusing DATABASE_URL, deliberately: this
- * file drops and recreates every table, and pointing it at a production connection
- * string by accident should be impossible rather than merely unlikely.
+ * It requires TEST_DATABASE_URL rather than reusing DATABASE_URL because it drops
+ * and recreates every table. Unset, these tests report as skipped.
  */
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
 
@@ -178,9 +176,8 @@ describe.skipIf(!TEST_DATABASE_URL)('repositories (integration)', () => {
   describe('writing both tables atomically', () => {
     /**
      * Analyzing writes an article and an analysis. A partial write — an article with
-     * no analysis — would show as a silently missing feed entry, so the two must
-     * commit together or not at all. These tests pin that the repositories can be
-     * bound to a transaction handle and that a failure rolls the whole thing back.
+     * no analysis — is a silently missing feed entry, so the two must commit together
+     * or not at all.
      */
     it('commits both rows together', async () => {
       const analysis = await sql.begin(async (tx) => {
@@ -227,8 +224,8 @@ describe.skipIf(!TEST_DATABASE_URL)('repositories (integration)', () => {
     });
 
     it('is safe to retry, because both writes are idempotent', async () => {
-      // Covers the one case a transaction cannot: the commit succeeds but the
-      // acknowledgement is lost, so the caller retries not knowing the outcome.
+      // A transaction cannot cover a lost commit acknowledgement, where the caller
+      // retries without knowing whether the write landed. Idempotency covers it.
       const write = () =>
         sql.begin(async (tx) => {
           const articleId = await createArticleRepository(tx).upsert(article(), {});

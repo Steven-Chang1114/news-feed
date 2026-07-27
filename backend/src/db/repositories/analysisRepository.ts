@@ -8,17 +8,10 @@ import type { Db } from '../client';
 import { decodeCursor, encodeCursor } from '../cursor';
 import type { AnalysisWithArticleRow } from '../types';
 
-/**
- * Repository parameter and return types follow one rule: method `foo` takes
- * `FooParams` and returns either a contract type or `FooResult`.
- *
- * Deliberately not `AnalysisInput` — `Input`/`Output` is reserved for the model
- * layer (`AnalysisOutput` is what the LLM returns), and these are arguments to a
- * database call.
- */
+/** The model's output, plus what storage adds around it. */
 export interface UpsertAnalysisParams extends AnalysisOutput {
   articleId: string;
-  /** Provenance, recorded alongside the result. */
+  /** Which model and prompt produced this result. */
   model: string;
   promptVersion: string;
   /** Cost and latency observability. Null when a provider omits usage data. */
@@ -27,11 +20,6 @@ export interface UpsertAnalysisParams extends AnalysisOutput {
   latencyMs: number | null;
 }
 
-/**
- * Analyze an article, remove one, mark up search results, read the feed.
- * `findById` is the one method with no endpoint behind it — `upsert` uses it to
- * read back the joined row it just wrote.
- */
 export interface AnalysisRepository {
   /** Stores the analysis, replacing any previous one for the same article. */
   upsert(params: UpsertAnalysisParams): Promise<AnalysisResponse>;
@@ -39,18 +27,13 @@ export interface AnalysisRepository {
   findById(id: string): Promise<AnalysisResponse | null>;
   /** Removes an analysis from the feed. False when it was already gone, so a route can 404. */
   delete(id: string): Promise<boolean>;
-  /** Article URL -> analysis id, for every URL already analyzed. One query for a whole page of search results. */
+  /** Article URL -> analysis id, for every URL already analyzed. One query per page of search results. */
   findIdsByUrls(urls: string[]): Promise<Map<string, string>>;
-  /**
-   * Backs `GET /analyses`. Returns the contract's response type directly rather
-   * than a repository-specific twin: the shapes are identical, and this layer
-   * already returns contract types elsewhere. If the response ever gains a field
-   * storage does not produce, that is the moment to split them.
-   */
+  /** Backs `GET /analyses`. */
   list(params: ParsedListAnalysesQuery): Promise<ListAnalysesResponse>;
 }
 
-/** Storage shape -> wire shape. The one place rows are allowed to become contract types. */
+/** Storage shape -> wire shape. The one place rows become contract types. */
 function toAnalysis(row: AnalysisWithArticleRow): AnalysisResponse {
   return {
     id: row.id,
@@ -74,8 +57,8 @@ function toAnalysis(row: AnalysisWithArticleRow): AnalysisResponse {
 }
 
 export function createAnalysisRepository(sql: Db): AnalysisRepository {
-  // Every read returns the same columns, so the projection is written once. Explicit
-  // rather than `SELECT *`, so adding an internal column cannot start shipping it.
+  // Every read returns the same columns. Listing them explicitly keeps a new
+  // internal column from reaching a client by default.
   const columns = sql`
     a.id, a.summary, a.sentiment, a.sentiment_score, a.rationale,
     a.model, a.prompt_version, a.created_at,
@@ -86,13 +69,12 @@ export function createAnalysisRepository(sql: Db): AnalysisRepository {
   const repository: AnalysisRepository = {
     async upsert(input) {
       /**
-       * `DO UPDATE` rather than `DO NOTHING`: analyzing an article again is an
-       * explicit request for a fresh result, so the newest one replaces the old.
-       * The unique index on article_id is what makes that atomic — two concurrent
-       * requests produce one row, not two, without a check-then-insert race.
+       * Analyzing an article again is a request for a fresh result, so the newest
+       * one replaces the old. The unique index on article_id makes that atomic:
+       * two concurrent requests produce one row.
        *
-       * `created_at` is deliberately not touched, so re-analyzing does not reorder
-       * the feed underneath someone who is scrolling it.
+       * `created_at` is left untouched. It is the feed's sort key, and moving it
+       * would reorder rows underneath someone paginating.
        */
       const rows = await sql<{ id: string }[]>`
         INSERT INTO analyses (
@@ -136,12 +118,12 @@ export function createAnalysisRepository(sql: Db): AnalysisRepository {
 
     async delete(id) {
       /**
-       * Only the analysis row. The article is deliberately left behind: it becomes a
-       * cache, so re-analyzing that URL reuses it, and because `findIdsByUrls` joins
-       * through `analyses`, search correctly offers "Analyze" again.
+       * Only the analysis row. The article stays as a cache, so re-analyzing that
+       * URL reuses it, and because `findIdsByUrls` joins through `analyses`, search
+       * offers "Analyze" again.
        *
-       * `RETURNING id` is how we know whether anything matched — a plain DELETE
-       * cannot distinguish "removed" from "was never there", and the route needs to.
+       * `RETURNING id` reports whether anything matched, which is what lets the
+       * route answer 404 rather than 204.
        */
       const rows = await sql<{ id: string }[]>`
         DELETE FROM analyses WHERE id = ${id} RETURNING id
@@ -153,7 +135,6 @@ export function createAnalysisRepository(sql: Db): AnalysisRepository {
       // Valid SQL with an empty array, but a pointless round trip.
       if (urls.length === 0) return new Map();
 
-      // One query for a whole page of search results, rather than one per card.
       const rows = await sql<{ url: string; id: string }[]>`
         SELECT ar.url, a.id
         FROM articles ar
@@ -168,14 +149,11 @@ export function createAnalysisRepository(sql: Db): AnalysisRepository {
       const decoded = cursor ? decodeCursor(cursor) : null;
 
       /**
-       * One static query with nullable parameters, rather than assembling WHERE
-       * fragments conditionally. `NULL OR <predicate>` is true when the filter is
-       * absent, so the same SQL serves all four filter combinations — which matters
-       * more than a marginally tighter plan in a codebase that has to be modified
-       * from memory.
+       * `NULL OR <predicate>` is true when a filter is absent, so this one query
+       * serves every combination of sentiment filter and cursor.
        *
-       * `limit + 1` is the has-next-page probe: if the extra row comes back there is
-       * another page, and it is discarded rather than returned.
+       * `limit + 1` probes for a next page: if the extra row comes back there is
+       * one, and the row itself is discarded.
        */
       const rows = await sql<AnalysisWithArticleRow[]>`
         SELECT ${columns}

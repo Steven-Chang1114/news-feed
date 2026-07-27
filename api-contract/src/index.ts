@@ -2,20 +2,17 @@
  * The API contract: every payload that crosses the network between frontend and
  * backend, defined once.
  *
- * The backend validates incoming requests against these schemas; the frontend
- * derives its types from them with `z.infer`. A change to a response shape is
- * therefore a compile error in the client rather than a runtime surprise in
- * production — which is the entire reason this is a package and not a folder of
- * hand-copied interfaces.
+ * The backend validates incoming requests against these schemas and the frontend
+ * infers its types from them, so a change to a response shape is a compile error in
+ * the client rather than a runtime surprise.
  *
- * Naming convention, applied uniformly so the surface is predictable from the
- * endpoint alone:
+ * Naming:
  *
  *   list<Resource>Query      query parameters for a GET collection
  *   list<Resource>Response   body of a GET collection
  *   create<Resource>Request  body of a POST
  *
- * Identifiers use American spellings ("analyze") throughout.
+ * Identifiers use American spellings ("analyze").
  */
 export * from './article';
 export * from './analysis';

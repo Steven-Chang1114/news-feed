@@ -1,19 +1,16 @@
 /**
  * Keyset pagination cursors.
  *
- * A cursor encodes the sort key of the last row on a page — `(created_at, id)` —
- * so the next page asks for "rows ordered after this one" rather than "skip 20".
- * With OFFSET, analyzing an article mid-scroll shifts every later row down and the
- * reader silently sees a duplicate; keyset pagination is stable under inserts
- * because the anchor is a position in the ordering, not a count.
+ * A cursor encodes the sort key of the last row on a page — `(created_at, id)` — so
+ * the next page asks for rows positioned after it in the ordering. Because the
+ * anchor is a position and not a count, analyses added at the head cannot shift a
+ * reader onto a row they have already seen.
  *
  * `id` is part of the key because `created_at` is not unique: two analyses created
- * in the same millisecond would otherwise make the boundary ambiguous and could
- * drop or repeat a row.
+ * in the same millisecond would otherwise make the page boundary ambiguous.
  *
- * Base64 is encoding, not security. It signals "opaque, do not parse" to clients,
- * and it survives being put in a query string. A tampered cursor is handled by
- * `decodeCursor` returning null.
+ * Base64 is encoding, not security. It marks the value as opaque and survives a
+ * query string; a tampered cursor is handled by `decodeCursor` returning null.
  */
 
 export interface Cursor {

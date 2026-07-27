@@ -5,9 +5,8 @@ import { z } from 'zod';
  * wrong. A misconfigured deploy should fail loudly in seconds, not silently at 3am
  * when the first request touches an undefined value.
  *
- * Only variables the code actually reads are listed. Provider keys and the HTTP port
- * arrive with the code that needs them, so `db:migrate` never fails for want of an
- * OpenAI key it will not use.
+ * Only variables the code reads are listed, so `db:migrate` never fails for want of
+ * an OpenAI key it will not use.
  */
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
