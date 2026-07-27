@@ -8,7 +8,7 @@ services:
     name: news-feed
     runtime: node
     plan: free
-    region: oregon
+    region: frankfurt
 
     # `npm ci` installs from the lockfile, so a deploy resolves the same versions
     # that were tested. `npm run build` builds the client, then bundles the server.
@@ -37,7 +37,7 @@ services:
 databases:
   - name: news-feed-db
     plan: free
-    region: oregon
+    region: frankfurt
     # Reached over Render's private network from the service above, so it is not
     # exposed to the public internet.
     ipAllowList: []
