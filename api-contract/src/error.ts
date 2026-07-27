@@ -1,13 +1,11 @@
 import { z } from 'zod';
 
 /**
- * One error envelope for every failure, so a client writes one handler instead of
- * branching on status codes and guessing at body shapes.
+ * One error envelope for every failure, so a client writes one handler.
  *
- * `code` is stable and machine-readable — clients switch on it. `message` is safe to
- * show a user and may be reworded freely. `requestId` is what a user quotes in a bug
- * report and what you grep the logs for; it is the whole reason an envelope beats a
- * bare string.
+ * `code` is stable and machine-readable, and clients switch on it. `message` is
+ * safe to show a user and may be reworded freely. `requestId` is what a user quotes
+ * in a bug report and what ties their failure to a log line.
  */
 export const ERROR_CODES = [
   /** Request failed schema validation. 400. */
@@ -18,7 +16,7 @@ export const ERROR_CODES = [
   'RATE_LIMITED',
   /** A third party (news provider, OpenAI) failed or timed out. 502. */
   'UPSTREAM_ERROR',
-  /** Anything unhandled. 500. Details are never echoed to the client. */
+  /** Anything unhandled. 500. */
   'INTERNAL_ERROR',
 ] as const;
 
@@ -29,7 +27,7 @@ export const errorResponseSchema = z.object({
   error: z.object({
     code: errorCodeSchema,
     message: z.string(),
-    /** Field-level validation problems. Omitted for internal errors — never leak internals. */
+    /** Field-level validation problems. Omitted for internal errors, which never echo details. */
     details: z.unknown().optional(),
     requestId: z.string(),
   }),

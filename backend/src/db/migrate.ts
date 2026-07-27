@@ -6,9 +6,8 @@ import type { Sql } from './client';
 const MIGRATIONS_DIR = join(dirname(fileURLToPath(import.meta.url)), 'migrations');
 
 /**
- * Arbitrary constant identifying this application's migration lock. Two processes
- * booting at once — which a rolling deploy does by design — would otherwise both
- * try to apply the same migration.
+ * Identifies this application's migration lock. A rolling deploy boots two
+ * processes at once, and both would otherwise apply the same migration.
  */
 const MIGRATION_LOCK_KEY = 947_120_385;
 
@@ -16,12 +15,12 @@ const MIGRATION_LOCK_KEY = 947_120_385;
  * Applies every `.sql` file in `migrations/` that has not run yet, in filename
  * order, recording each in `schema_migrations`.
  *
- * Migrations are numbered and immutable: fixing a mistake means adding `002_…`,
- * never editing `001_…`, because an already-applied file will never run again.
+ * Migrations are numbered and immutable: an already-applied file never runs again,
+ * so fixing a mistake means adding `002_…`.
  *
- * Each migration runs in a transaction together with its bookkeeping insert, so a
- * failure cannot leave a half-applied schema recorded as complete. Postgres has
- * transactional DDL, which is exactly what makes that guarantee possible.
+ * Postgres has transactional DDL, so each migration runs in a transaction with its
+ * own bookkeeping insert. A failure cannot leave a half-applied schema recorded as
+ * complete.
  */
 export async function runMigrations(db: Sql): Promise<string[]> {
   await db`

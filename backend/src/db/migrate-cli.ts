@@ -5,8 +5,8 @@ import { runMigrations } from './migrate';
 /**
  * `npm run db:migrate`.
  *
- * Separate from `migrate.ts` so importing `runMigrations` in a test never reads
- * `DATABASE_URL` or opens a connection — no entry-point detection required.
+ * Separate from `migrate.ts` so importing `runMigrations` in a test reads no
+ * environment and opens no connection.
  */
 const db = createClient(env.DATABASE_URL);
 

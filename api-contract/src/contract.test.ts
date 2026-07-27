@@ -4,9 +4,8 @@ import { analysisOutputSchema, listAnalysesQuerySchema } from './analysis';
 import { errorResponseSchema } from './error';
 
 /**
- * These tests exist to pin the behaviour the rest of the system relies on —
- * coercion, defaults, and rejection — not to test that Zod works. Each case
- * corresponds to something that would otherwise fail at runtime somewhere less
+ * Pins the coercion, defaults and rejection the rest of the system relies on. Each
+ * case corresponds to something that would otherwise fail at runtime somewhere less
  * obvious.
  */
 
@@ -35,8 +34,8 @@ describe('articleSchema', () => {
   });
 
   it('treats a missing nullable field as absent rather than null', () => {
-    // Guards a real trap: `null` and `undefined` are not interchangeable here, so a
-    // provider adapter must map missing fields to null explicitly.
+    // `null` and `undefined` are not interchangeable here, so a provider adapter
+    // must map missing fields to null explicitly.
     const { description, ...withoutDescription } = validArticle;
     expect(articleSchema.safeParse(withoutDescription).success).toBe(false);
   });
@@ -92,7 +91,7 @@ describe('analysisOutputSchema', () => {
   });
 
   it('rejects a sentiment label outside the closed set', () => {
-    // The likeliest real failure: a model returning "mixed" or "very positive".
+    // A model returning "mixed" or "very positive" is the likeliest failure here.
     expect(analysisOutputSchema.safeParse({ ...validOutput, sentiment: 'mixed' }).success).toBe(
       false,
     );
