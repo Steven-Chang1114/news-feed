@@ -17,3 +17,6 @@ npm-debug.log*
 
 # Test output
 coverage/
+
+# TypeScript incremental build state
+*.tsbuildinfo
