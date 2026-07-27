@@ -24,7 +24,6 @@ export interface AnalysisWithArticleRow {
   summary: string;
   sentiment: Sentiment;
   sentimentScore: number;
-  rationale: string;
   model: string;
   promptVersion: string;
   createdAt: Date;

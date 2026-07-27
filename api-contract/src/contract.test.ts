@@ -83,8 +83,7 @@ describe('analysisOutputSchema', () => {
     summary: 'A summary.',
     sentiment: 'positive',
     sentimentScore: 0.8,
-    rationale: 'Because of X.',
-  };
+    };
 
   it('accepts a well-formed model response', () => {
     expect(analysisOutputSchema.parse(validOutput)).toEqual(validOutput);

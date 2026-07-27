@@ -21,7 +21,6 @@ const VALID_OUTPUT = {
   summary: 'The central bank held rates steady, as expected.',
   sentiment: 'neutral',
   sentimentScore: 0,
-  rationale: 'The article reports the decision without evaluative language.',
 };
 
 function completionReturning(content: unknown, usage?: ChatCompletionResponse['usage']) {

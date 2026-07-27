@@ -1,15 +1,16 @@
 import { articleSchema, type Article } from '@news-feed/api-contract';
+import axios, { type AxiosInstance } from 'axios';
 import { rateLimitedError, upstreamError } from '../errors';
 import type { NewsProvider } from './types';
 
-const GNEWS_SEARCH_URL = 'https://gnews.io/api/v4/search';
+const GNEWS_BASE_URL = 'https://gnews.io/api/v4';
 
 export interface GNewsOptions {
   apiKey: string;
   /** A search sits in front of a user waiting on a page, so it fails fast. */
   timeoutMs?: number;
   /** Injected so tests never reach the network. */
-  fetchImpl?: typeof fetch;
+  client?: AxiosInstance;
 }
 
 /** One article in a GNews v4 response. Every field is treated as untrusted. */
@@ -31,46 +32,37 @@ function optionalString(value: unknown): string | null {
 export function createGNewsProvider({
   apiKey,
   timeoutMs = 10_000,
-  fetchImpl = fetch,
+  client = axios.create({ baseURL: GNEWS_BASE_URL, timeout: timeoutMs }),
 }: GNewsOptions): NewsProvider {
   return {
     async search({ q, lang, limit }) {
-      const url = new URL(GNEWS_SEARCH_URL);
-      url.searchParams.set('q', q);
-      url.searchParams.set('lang', lang);
-      url.searchParams.set('max', String(limit));
-      url.searchParams.set('apikey', apiKey);
-
-      let response: Response;
+      let data: unknown;
       try {
-        response = await fetchImpl(url, { signal: AbortSignal.timeout(timeoutMs) });
+        // axios rejects on a non-2xx status, so the failure paths are all in catch.
+        ({ data } = await client.get('/search', {
+          params: { q, lang, max: limit, apikey: apiKey },
+        }));
       } catch (cause) {
-        // A timeout arrives here as an AbortError, indistinguishable to a caller
-        // from a DNS or connection failure — all of them mean "no results".
+        const status = axios.isAxiosError(cause) ? cause.response?.status : undefined;
+
+        // The free tier allows 100 requests a day, so this is reachable in normal use.
+        if (status === 429) {
+          throw rateLimitedError('The news provider daily request limit has been reached');
+        }
+        if (status !== undefined) {
+          throw upstreamError(`The news provider returned ${status}`);
+        }
+        // No status means the request never completed: timeout, DNS, or connection.
         throw upstreamError('The news provider did not respond', cause);
       }
 
-      if (response.status === 429) {
-        // The free tier allows 100 requests a day, so this is reachable in normal use.
-        throw rateLimitedError('The news provider daily request limit has been reached');
-      }
-      if (!response.ok) {
-        throw upstreamError(`The news provider returned ${response.status}`);
-      }
-
-      let body: { articles?: unknown };
-      try {
-        body = (await response.json()) as { articles?: unknown };
-      } catch (cause) {
-        throw upstreamError('The news provider returned a malformed response', cause);
-      }
-
-      if (!Array.isArray(body.articles)) {
+      const articles = (data as { articles?: unknown } | null)?.articles;
+      if (!Array.isArray(articles)) {
         throw upstreamError('The news provider returned no article list');
       }
 
-      const articles: Article[] = [];
-      for (const raw of body.articles as GNewsArticle[]) {
+      const mapped: Article[] = [];
+      for (const raw of articles as GNewsArticle[]) {
         const candidate = {
           url: raw.url,
           title: raw.title,
@@ -84,10 +76,10 @@ export function createGNewsProvider({
         // A single malformed article should cost the user that result, not the whole
         // page, so it is dropped rather than raised.
         const parsed = articleSchema.safeParse(candidate);
-        if (parsed.success) articles.push(parsed.data);
+        if (parsed.success) mapped.push(parsed.data);
       }
 
-      return articles;
+      return mapped;
     },
   };
 }

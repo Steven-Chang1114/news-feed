@@ -1,3 +1,4 @@
+import type { AxiosInstance } from 'axios';
 import { describe, expect, it, vi } from 'vitest';
 import { AppError } from '../errors';
 import { createGNewsProvider } from './gnews';
@@ -18,15 +19,27 @@ const GNEWS_ARTICLE = {
   source: { id: 'c57', name: 'The Tribune', url: 'https://www.tribuneindia.com', country: 'in' },
 };
 
-function respondWith(body: unknown, status = 200) {
-  return vi.fn(async () => new Response(JSON.stringify(body), { status })) as unknown as typeof fetch;
+function clientReturning(data: unknown) {
+  const get = vi.fn(async () => ({ data }));
+  return { get } as unknown as AxiosInstance & { get: typeof get };
+}
+
+/** An axios rejection, which is what a non-2xx status produces. */
+function clientFailingWith(status?: number) {
+  const get = vi.fn(async () => {
+    throw Object.assign(new Error('Request failed'), {
+      isAxiosError: true,
+      response: status === undefined ? undefined : { status },
+    });
+  });
+  return { get } as unknown as AxiosInstance & { get: typeof get };
 }
 
 const query = { q: 'climate', lang: 'en', limit: 10 };
 
 describe('createGNewsProvider', () => {
   it('maps a provider article onto the contract shape', async () => {
-    const provider = createGNewsProvider({ apiKey: 'k', fetchImpl: respondWith({ articles: [GNEWS_ARTICLE] }) });
+    const provider = createGNewsProvider({ apiKey: 'k', client: clientReturning({ articles: [GNEWS_ARTICLE] }) });
 
     const [article] = await provider.search(query);
 
@@ -42,24 +55,22 @@ describe('createGNewsProvider', () => {
   });
 
   it('sends the query, language, limit and key as parameters', async () => {
-    const fetchImpl = respondWith({ articles: [] });
-    await createGNewsProvider({ apiKey: 'secret-key', fetchImpl }).search({
+    const client = clientReturning({ articles: [] });
+    await createGNewsProvider({ apiKey: 'secret-key', client }).search({
       q: 'climate change',
       lang: 'fr',
       limit: 5,
     });
 
-    const url = new URL(String(vi.mocked(fetchImpl).mock.calls[0]![0]));
-    expect(url.searchParams.get('q')).toBe('climate change');
-    expect(url.searchParams.get('lang')).toBe('fr');
-    expect(url.searchParams.get('max')).toBe('5');
-    expect(url.searchParams.get('apikey')).toBe('secret-key');
+    expect(client.get).toHaveBeenCalledWith('/search', {
+      params: { q: 'climate change', lang: 'fr', max: 5, apikey: 'secret-key' },
+    });
   });
 
   it('turns absent optional fields into null rather than undefined', async () => {
     // The contract distinguishes the two, and the database column is nullable.
     const sparse = { url: 'https://example.com/a', title: 'A headline' };
-    const provider = createGNewsProvider({ apiKey: 'k', fetchImpl: respondWith({ articles: [sparse] }) });
+    const provider = createGNewsProvider({ apiKey: 'k', client: clientReturning({ articles: [sparse] }) });
 
     const [article] = await provider.search(query);
 
@@ -74,7 +85,7 @@ describe('createGNewsProvider', () => {
 
   it('treats an empty string as absent', async () => {
     const blank = { ...GNEWS_ARTICLE, description: '', image: '' };
-    const provider = createGNewsProvider({ apiKey: 'k', fetchImpl: respondWith({ articles: [blank] }) });
+    const provider = createGNewsProvider({ apiKey: 'k', client: clientReturning({ articles: [blank] }) });
 
     const [article] = await provider.search(query);
 
@@ -85,7 +96,7 @@ describe('createGNewsProvider', () => {
   it('drops a malformed article instead of failing the whole page', async () => {
     const provider = createGNewsProvider({
       apiKey: 'k',
-      fetchImpl: respondWith({ articles: [{ url: 'not-a-url', title: 'Broken' }, GNEWS_ARTICLE] }),
+      client: clientReturning({ articles: [{ url: 'not-a-url', title: 'Broken' }, GNEWS_ARTICLE] }),
     });
 
     const articles = await provider.search(query);
@@ -96,23 +107,20 @@ describe('createGNewsProvider', () => {
 
   it('reports a quota exhaustion as RATE_LIMITED, not a generic failure', async () => {
     // Reachable in normal use: the free tier allows 100 requests a day.
-    const provider = createGNewsProvider({ apiKey: 'k', fetchImpl: respondWith({}, 429) });
+    const provider = createGNewsProvider({ apiKey: 'k', client: clientFailingWith(429) });
 
     await expect(provider.search(query)).rejects.toMatchObject({ code: 'RATE_LIMITED', status: 429 });
   });
 
   it('reports any other error status as UPSTREAM_ERROR', async () => {
-    const provider = createGNewsProvider({ apiKey: 'k', fetchImpl: respondWith({}, 503) });
+    const provider = createGNewsProvider({ apiKey: 'k', client: clientFailingWith(503) });
 
     await expect(provider.search(query)).rejects.toMatchObject({ code: 'UPSTREAM_ERROR', status: 502 });
   });
 
-  it('reports a network failure or timeout as UPSTREAM_ERROR', async () => {
-    const failing = vi.fn(async () => {
-      throw new DOMException('The operation was aborted', 'AbortError');
-    }) as unknown as typeof fetch;
-
-    const error = await createGNewsProvider({ apiKey: 'k', fetchImpl: failing })
+  it('reports a timeout or connection failure as UPSTREAM_ERROR', async () => {
+    // No response means the request never completed.
+    const error = await createGNewsProvider({ apiKey: 'k', client: clientFailingWith(undefined) })
       .search(query)
       .catch((e: unknown) => e);
 
@@ -120,16 +128,15 @@ describe('createGNewsProvider', () => {
     expect((error as AppError).code).toBe('UPSTREAM_ERROR');
   });
 
-  it('reports a response that is not JSON as UPSTREAM_ERROR', async () => {
-    const html = vi.fn(async () => new Response('<html>502</html>', { status: 200 })) as unknown as typeof fetch;
+  it('reports a body that is not an article list as UPSTREAM_ERROR', async () => {
+    // A proxy returning an HTML error page leaves `data` as a string.
+    const provider = createGNewsProvider({ apiKey: 'k', client: clientReturning('<html>502</html>') });
 
-    await expect(createGNewsProvider({ apiKey: 'k', fetchImpl: html }).search(query)).rejects.toMatchObject({
-      code: 'UPSTREAM_ERROR',
-    });
+    await expect(provider.search(query)).rejects.toMatchObject({ code: 'UPSTREAM_ERROR' });
   });
 
   it('reports a response with no article list as UPSTREAM_ERROR', async () => {
-    const provider = createGNewsProvider({ apiKey: 'k', fetchImpl: respondWith({ totalArticles: 0 }) });
+    const provider = createGNewsProvider({ apiKey: 'k', client: clientReturning({ totalArticles: 0 }) });
 
     await expect(provider.search(query)).rejects.toMatchObject({ code: 'UPSTREAM_ERROR' });
   });

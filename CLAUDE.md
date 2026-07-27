@@ -23,7 +23,7 @@ below: small, boring, and navigable beats clever.
 | --- | --- | --- |
 | 1 | Search recent news by keyword | provider done, needs route |
 | 2 | See at a glance which results are already analyzed | contract + repo done |
-| 3 | Analyze an article — LLM summary, sentiment label, score, one-line rationale | provider done, needs route |
+| 3 | Analyze an article — LLM summary, sentiment label and score | provider done, needs route |
 | 4 | Re-analyze an article; the new result replaces the old one | repo done |
 | 5 | Feed listing every analyzed article with its sentiment label, newest first | repo done |
 | 6 | Click a feed row to reveal its summary | PR 6 |
@@ -59,7 +59,7 @@ Feed page
   a list of analyzed articles, newest first
   each row, collapsed:  title, source, date, sentiment label
     → click a row → expands in place to reveal
-        summary, rationale, link to the original article,
+        summary, link to the original article,
         "Re-analyze", "Remove"
     → filter chips: all / positive / neutral / negative
     → "Load more" (cursor-based)
@@ -127,7 +127,7 @@ published_at  raw(jsonb)  created_at  updated_at
 
 ```
 id  article_id(fk,unique)  summary  sentiment(check)  sentiment_score(check)
-rationale  model  prompt_version  tokens_in  tokens_out  latency_ms  created_at
+model  prompt_version  tokens_in  tokens_out  latency_ms  created_at
 ```
 
 `created_at` is never updated on replace: it is the feed's sort key, and mutating it

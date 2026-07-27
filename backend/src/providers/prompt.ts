@@ -39,12 +39,8 @@ export const ANALYSIS_JSON_SCHEMA = {
       type: 'number',
       description: 'Intensity from -1 (most negative) through 0 (neutral) to 1 (most positive).',
     },
-    rationale: {
-      type: 'string',
-      description: 'One sentence explaining the sentiment.',
-    },
   },
-  required: ['summary', 'sentiment', 'sentimentScore', 'rationale'],
+  required: ['summary', 'sentiment', 'sentimentScore'],
   additionalProperties: false,
 } as const;
 

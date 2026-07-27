@@ -34,8 +34,6 @@ export const analysisOutputSchema = z.object({
    * score preserves degree, so they can also be ranked by intensity.
    */
   sentimentScore: z.number().min(-1).max(1),
-  /** One line on why, so the label is a claim a user can check. */
-  rationale: z.string().min(1),
 });
 export type AnalysisOutput = z.infer<typeof analysisOutputSchema>;
 
