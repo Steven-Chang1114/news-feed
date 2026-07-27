@@ -3,15 +3,15 @@ import { Router } from 'express';
 import { validationError } from '../../errors';
 import type { ArticleService } from '../../services/articleService';
 
-export function createArticlesController(articles: ArticleService): Router {
-  const controller = Router();
+export function createArticleController(articleService: ArticleService): Router {
+  const router = Router();
 
-  controller.get('/', async (req, res) => {
+  router.get('/', async (req, res) => {
     const query = listArticlesQuerySchema.safeParse(req.query);
     if (!query.success) throw validationError(query.error.flatten().fieldErrors);
 
-    res.json(await articles.search(query.data));
+    res.json(await articleService.search(query.data));
   });
 
-  return controller;
+  return router;
 }

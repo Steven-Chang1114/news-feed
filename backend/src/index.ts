@@ -13,12 +13,12 @@ import { createArticleService } from './services/articleService';
  * concrete implementations. Everything below it receives what it needs.
  */
 const sql = createClient(env.DATABASE_URL);
-const analysesRepo = createAnalysisRepository(sql);
+const analysisRepo = createAnalysisRepository(sql);
 
 const app = createApp({
   articleService: createArticleService(
     createGNewsProvider({ apiKey: env.GNEWS_API_KEY }),
-    analysesRepo,
+    analysisRepo,
   ),
   analysisService: createAnalysisService(
     sql,
@@ -26,7 +26,7 @@ const app = createApp({
       new OpenAI({ apiKey: env.OPENAI_API_KEY, timeout: 20_000, maxRetries: 2 }),
       env.OPENAI_MODEL,
     ),
-    analysesRepo,
+    analysisRepo,
   ),
   corsOrigin: env.CORS_ORIGIN,
 });

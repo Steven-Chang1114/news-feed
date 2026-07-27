@@ -20,8 +20,8 @@ const query = { q: 'climate', lang: 'en', limit: 10 };
 
 function build(articles: Article[], analysed: Map<string, string>) {
   const news = { search: vi.fn(async () => articles) } as NewsProvider;
-  const analysesRepo = { findIdsByUrls: vi.fn(async () => analysed) } as unknown as AnalysisRepository;
-  return { service: createArticleService(news, analysesRepo), news, analysesRepo };
+  const analysisRepo = { findIdsByUrls: vi.fn(async () => analysed) } as unknown as AnalysisRepository;
+  return { service: createArticleService(news, analysisRepo), news, analysisRepo };
 }
 
 describe('createArticleService', () => {
@@ -43,12 +43,12 @@ describe('createArticleService', () => {
 
   it('resolves a whole page in one lookup rather than one per result', async () => {
     const urls = ['https://a.test', 'https://b.test', 'https://c.test'];
-    const { service, analysesRepo } = build(urls.map(article), new Map());
+    const { service, analysisRepo } = build(urls.map(article), new Map());
 
     await service.search(query);
 
-    expect(analysesRepo.findIdsByUrls).toHaveBeenCalledTimes(1);
-    expect(analysesRepo.findIdsByUrls).toHaveBeenCalledWith(urls);
+    expect(analysisRepo.findIdsByUrls).toHaveBeenCalledTimes(1);
+    expect(analysisRepo.findIdsByUrls).toHaveBeenCalledWith(urls);
   });
 
   it('passes the parsed query straight to the provider', async () => {

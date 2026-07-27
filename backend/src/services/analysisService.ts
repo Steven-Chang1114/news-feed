@@ -24,7 +24,7 @@ export interface AnalysisService {
 export function createAnalysisService(
   sql: Sql,
   analyzer: Analyzer,
-  analysesRepo: AnalysisRepository,
+  analysisRepo: AnalysisRepository,
 ): AnalysisService {
   return {
     async analyze(article) {
@@ -48,8 +48,8 @@ export function createAnalysisService(
       });
     },
 
-    list: (query) => analysesRepo.list(query),
+    list: (query) => analysisRepo.list(query),
 
-    delete: (id) => analysesRepo.delete(id),
+    delete: (id) => analysisRepo.delete(id),
   };
 }

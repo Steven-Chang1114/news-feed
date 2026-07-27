@@ -8,7 +8,7 @@ export interface ArticleService {
 
 export function createArticleService(
   news: NewsProvider,
-  analysesRepo: AnalysisRepository,
+  analysisRepo: AnalysisRepository,
 ): ArticleService {
   return {
     async search(query) {
@@ -16,7 +16,7 @@ export function createArticleService(
 
       // One query for the whole page, so a result knows its own state without the
       // client asking per card.
-      const analysisIds = await analysesRepo.findIdsByUrls(articles.map((article) => article.url));
+      const analysisIds = await analysisRepo.findIdsByUrls(articles.map((article) => article.url));
 
       return {
         articles: articles.map((article) => ({

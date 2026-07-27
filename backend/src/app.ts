@@ -1,8 +1,8 @@
 import cors from 'cors';
 import express, { type Express } from 'express';
 import { errorHandler, notFoundHandler, requestId } from './http/errorHandler';
-import { createAnalysesController } from './http/controllers/analyses';
-import { createArticlesController } from './http/controllers/articles';
+import { createAnalysisController } from './http/controllers/analysisController';
+import { createArticleController } from './http/controllers/articleController';
 import type { AnalysisService } from './services/analysisService';
 import type { ArticleService } from './services/articleService';
 
@@ -34,8 +34,8 @@ export function createApp({ articleService, analysisService, corsOrigin }: AppDe
     res.json({ status: 'ok' });
   });
 
-  app.use('/api/v1/articles', createArticlesController(articleService));
-  app.use('/api/v1/analyses', createAnalysesController(analysisService));
+  app.use('/api/v1/articles', createArticleController(articleService));
+  app.use('/api/v1/analyses', createAnalysisController(analysisService));
 
   app.use(notFoundHandler);
   app.use(errorHandler);
