@@ -71,7 +71,23 @@ internal columns the wire never sees.
 **Imports** use the package name across workspaces (`@news-feed/api-contract`) and
 relative paths within one (`./prompt`, `../errors`).
 
-**SQL** lives only in `backend/src/db/repositories/`. Never in a route or a service.
+**Layers** run one way: controller → service → repository. A controller never holds a
+repository, and the app is wired with services only, so nothing can reach past a
+service to the database.
+
+**A name says its layer.** One file, one function and one variable per role, all
+carrying the same suffix, so a call site reads without opening anything:
+
+```
+analysisController   articleController    http/controllers/analysisController.ts
+analysisService      articleService       services/analysisService.ts
+analysisRepo         —                    db/repositories/analysisRepository.ts
+```
+
+The one exception is inside a controller, where the Express object is `router` —
+that is what it is, and the file name already says which controller it belongs to.
+
+**SQL** lives only in `backend/src/db/repositories/`. Never in a controller or a service.
 
 **Transactions** are opened in the service layer only. Repositories take whichever
 handle they are given and never open one; inside a transaction every query must go

@@ -13,7 +13,7 @@ sentiment score, and build up a personal digest you can scan by mood.
 | --- | --- | --- |
 | Frontend | Vue 3 + TypeScript (Vite) | `<script setup>` + typed props; no component or styling library — the UI is deliberately plain CSS |
 | Backend | Node 22 + Express 5 + TypeScript | Express 5 propagates async errors to the error middleware natively, which removes the `asyncHandler` wrapper Express 4 needed |
-| Database | PostgreSQL | Enforces a closed sentiment set at the storage layer, `jsonb` for raw provider payloads, `RETURNING` for single-round-trip upserts |
+| Database | PostgreSQL | Enforces a closed sentiment set at the storage layer, and `RETURNING` makes an upsert a single round trip |
 | DB access | `postgres.js` + hand-written SQL | Small query surface; no abstraction between the code and the query plan. All SQL is confined to the repository layer |
 | Contract | Zod schemas in `api-contract/` | Server validates against them, client infers types from them — a response-shape change becomes a frontend compile error |
 | AI | OpenAI `gpt-4.1-nano`, strict Structured Outputs | A JSON Schema the model cannot violate, so malformed output is designed out rather than parsed around |
@@ -24,7 +24,7 @@ The query surface here is roughly eight queries. An ORM would add a dependency, 
 build step, and a layer of indirection in exchange for type inference we can get
 most of by other means. Instead:
 
-- All SQL lives in `backend/src/db/repositories/` — never in a route handler or service.
+- All SQL lives in `backend/src/db/repositories/` — never in a controller or service.
   Services depend on a repository *interface*, which is what keeps them testable.
 - `postgres.js` tagged templates are parameterised by the driver (`` sql`WHERE id = ${id}` ``
   sends `$1`), so injection is prevented structurally, not by discipline.
@@ -84,6 +84,6 @@ Two free-tier behaviours to be aware of, both expected rather than broken:
 - [x] API contract
 - [x] Database schema, migrations, repositories
 - [x] GNews + OpenAI providers behind swappable interfaces
-- [ ] REST API
+- [x] REST API
 - [ ] Vue 3 client
 - [ ] Deploy + architecture notes

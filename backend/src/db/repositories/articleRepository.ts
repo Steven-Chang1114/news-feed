@@ -3,19 +3,19 @@ import type { Db } from '../client';
 
 export interface ArticleRepository {
   /** Inserts the article, or refreshes it if we already hold that URL. Returns its id. */
-  upsert(article: Article, raw: unknown): Promise<string>;
+  upsert(article: Article): Promise<string>;
 }
 
 export function createArticleRepository(sql: Db): ArticleRepository {
   return {
-    async upsert(article, raw) {
+    async upsert(article) {
       /**
        * `DO UPDATE` returns the row on conflict, so the id comes back in one round
        * trip. Refreshing the columns is also correct on its own terms: a provider
        * may have corrected a headline or filled in an image since we last saw it.
        */
       const rows = await sql<{ id: string }[]>`
-        INSERT INTO articles (url, title, description, content, image_url, source_name, published_at, raw)
+        INSERT INTO articles (url, title, description, content, image_url, source_name, published_at)
         VALUES (
           ${article.url},
           ${article.title},
@@ -23,8 +23,7 @@ export function createArticleRepository(sql: Db): ArticleRepository {
           ${article.content},
           ${article.imageUrl},
           ${article.sourceName},
-          ${article.publishedAt},
-          ${sql.json(raw as never)}
+          ${article.publishedAt}
         )
         ON CONFLICT (url) DO UPDATE SET
           title        = EXCLUDED.title,
@@ -33,7 +32,6 @@ export function createArticleRepository(sql: Db): ArticleRepository {
           image_url    = EXCLUDED.image_url,
           source_name  = EXCLUDED.source_name,
           published_at = EXCLUDED.published_at,
-          raw          = EXCLUDED.raw,
           updated_at   = now()
         RETURNING id
       `;

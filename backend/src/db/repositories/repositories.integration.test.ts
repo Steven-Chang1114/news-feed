@@ -58,15 +58,13 @@ describe.skipIf(!TEST_DATABASE_URL)('repositories (integration)', () => {
   async function seedAnalysis(
     overrides: { url?: string; sentiment?: 'positive' | 'neutral' | 'negative'; summary?: string } = {},
   ) {
-    const articleId = await articles.upsert(article(overrides.url ? { url: overrides.url } : {}), {
-      provider: 'test',
-    });
+    const articleId = await articles.upsert(article(overrides.url ? { url: overrides.url } : {}));
     return analyses.upsert({
       articleId,
       summary: overrides.summary ?? 'A summary',
       sentiment: overrides.sentiment ?? 'positive',
       sentimentScore: 0.5,
-          model: MODEL,
+      model: MODEL,
       promptVersion: PROMPT_VERSION,
       tokensIn: 100,
       tokensOut: 50,
@@ -76,24 +74,24 @@ describe.skipIf(!TEST_DATABASE_URL)('repositories (integration)', () => {
 
   describe('articleRepository.upsert', () => {
     it('inserts a new article and returns its id', async () => {
-      expect(await articles.upsert(article(), { provider: 'test' })).toMatch(/^[0-9a-f-]{36}$/);
+      expect(await articles.upsert(article())).toMatch(/^[0-9a-f-]{36}$/);
     });
 
     it('returns the same id for the same url, so analyzing twice cannot duplicate', async () => {
-      const first = await articles.upsert(article(), { provider: 'test' });
-      expect(await articles.upsert(article(), { provider: 'test' })).toBe(first);
+      const first = await articles.upsert(article());
+      expect(await articles.upsert(article())).toBe(first);
     });
 
     it('refreshes metadata when a provider has corrected it', async () => {
-      await articles.upsert(article(), { provider: 'test' });
-      await articles.upsert(article({ title: 'A corrected headline' }), { provider: 'test' });
+      await articles.upsert(article());
+      await articles.upsert(article({ title: 'A corrected headline' }));
 
       const [row] = await sql<{ title: string }[]>`SELECT title FROM articles WHERE url = ${article().url}`;
       expect(row?.title).toBe('A corrected headline');
     });
 
     it('persists null optional fields without turning them into empty strings', async () => {
-      await articles.upsert(article({ description: null, imageUrl: null, publishedAt: null }), {});
+      await articles.upsert(article({ description: null, imageUrl: null, publishedAt: null }));
 
       const [row] = await sql<{ description: string | null; publishedAt: Date | null }[]>`
         SELECT description, published_at FROM articles WHERE url = ${article().url}
@@ -142,7 +140,7 @@ describe.skipIf(!TEST_DATABASE_URL)('repositories (integration)', () => {
     });
 
     it('refuses a sentiment outside the closed set, at the database', async () => {
-      const articleId = await articles.upsert(article(), {});
+      const articleId = await articles.upsert(article());
       await expect(
         analyses.upsert({
           articleId,
@@ -150,7 +148,7 @@ describe.skipIf(!TEST_DATABASE_URL)('repositories (integration)', () => {
           // The exact failure a language model produces: a plausible label we never allowed.
           sentiment: 'mixed' as never,
           sentimentScore: 0,
-            model: MODEL,
+          model: MODEL,
           promptVersion: PROMPT_VERSION,
           tokensIn: null,
           tokensOut: null,
@@ -179,13 +177,13 @@ describe.skipIf(!TEST_DATABASE_URL)('repositories (integration)', () => {
      */
     it('commits both rows together', async () => {
       const analysis = await sql.begin(async (tx) => {
-        const articleId = await createArticleRepository(tx).upsert(article(), { provider: 'test' });
+        const articleId = await createArticleRepository(tx).upsert(article());
         return createAnalysisRepository(tx).upsert({
           articleId,
           summary: 'A summary',
           sentiment: 'positive',
           sentimentScore: 0.5,
-                  model: MODEL,
+          model: MODEL,
           promptVersion: PROMPT_VERSION,
           tokensIn: null,
           tokensOut: null,
@@ -199,13 +197,13 @@ describe.skipIf(!TEST_DATABASE_URL)('repositories (integration)', () => {
     it('rolls the article back when the analysis write fails', async () => {
       await expect(
         sql.begin(async (tx) => {
-          await createArticleRepository(tx).upsert(article(), { provider: 'test' });
+          await createArticleRepository(tx).upsert(article());
           return createAnalysisRepository(tx).upsert({
             articleId: '00000000-0000-4000-8000-000000000000', // no such article: FK violation
             summary: 's',
             sentiment: 'positive',
             sentimentScore: 0,
-                model: MODEL,
+            model: MODEL,
             promptVersion: PROMPT_VERSION,
             tokensIn: null,
             tokensOut: null,
@@ -224,13 +222,13 @@ describe.skipIf(!TEST_DATABASE_URL)('repositories (integration)', () => {
       // retries without knowing whether the write landed. Idempotency covers it.
       const write = () =>
         sql.begin(async (tx) => {
-          const articleId = await createArticleRepository(tx).upsert(article(), {});
+          const articleId = await createArticleRepository(tx).upsert(article());
           return createAnalysisRepository(tx).upsert({
             articleId,
             summary: 'A summary',
             sentiment: 'positive',
             sentimentScore: 0.5,
-                      model: MODEL,
+            model: MODEL,
             promptVersion: PROMPT_VERSION,
             tokensIn: null,
             tokensOut: null,
@@ -318,7 +316,7 @@ describe.skipIf(!TEST_DATABASE_URL)('repositories (integration)', () => {
     });
 
     it('ignores articles stored but never analyzed', async () => {
-      await articles.upsert(article({ url: 'https://example.com/stored-only' }), {});
+      await articles.upsert(article({ url: 'https://example.com/stored-only' }));
       expect((await analyses.findIdsByUrls(['https://example.com/stored-only'])).size).toBe(0);
     });
   });
