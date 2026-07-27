@@ -9,16 +9,12 @@ import postgres from 'postgres';
 export function createClient(connectionString: string) {
   return postgres(connectionString, {
     /**
-     * Required, despite looking like tuning.
-     *
-     * Neon suspends compute only while no client holds a connection, and the free
-     * plan allows 100 compute-hours a month — about 4.2 days of continuous uptime.
-     * postgres.js keeps idle connections open by default, which would hold the
-     * database awake and exhaust the allowance in roughly four days. Closing idle
-     * connections lets compute scale to zero between visits.
+     * postgres.js holds idle connections open indefinitely by default. The host
+     * spins the service down after a quiet period, so releasing them means a
+     * suspended service is not still occupying slots on the database.
      */
     idle_timeout: 20,
-    /** Under Neon's free-plan connection ceiling for a single service. */
+    /** Well inside the free plan's connection ceiling for a single service. */
     max: 10,
     /**
      * Maps `created_at` <-> `createdAt` at the driver level, in both directions.
