@@ -1,10 +1,9 @@
 import type {
   AnalysisOutput,
   AnalysisResponse,
+  ListAnalysesQuery,
   ListAnalysesResponse,
-  listAnalysesQuerySchema,
 } from '@news-feed/api-contract';
-import type { z } from 'zod';
 import type { Sql } from '../client';
 import { decodeCursor, encodeCursor } from '../cursor';
 import type { AnalysisWithArticleRow } from '../types';
@@ -29,15 +28,6 @@ export interface UpsertAnalysisParams extends AnalysisOutput {
 }
 
 /**
- * Derived from the endpoint's schema rather than restated, so adding a filter
- * changes one place. This is the schema's *output* type — post-coercion, with
- * defaults applied — which is exactly what reaches a repository.
- *
- * Split them if the query ever gains a parameter storage does not handle.
- */
-export type ListAnalysesParams = z.infer<typeof listAnalysesQuerySchema>;
-
-/**
  * Analyze an article, mark up search results, read the feed. `findById` is the one
  * method with no endpoint behind it — `upsert` uses it to read back the joined row
  * it just wrote.
@@ -55,7 +45,7 @@ export interface AnalysisRepository {
    * already returns contract types elsewhere. If the response ever gains a field
    * storage does not produce, that is the moment to split them.
    */
-  list(params: ListAnalysesParams): Promise<ListAnalysesResponse>;
+  list(params: ListAnalysesQuery): Promise<ListAnalysesResponse>;
 }
 
 /** Storage shape -> wire shape. The one place rows are allowed to become contract types. */

@@ -97,7 +97,14 @@ export const listAnalysesQuerySchema = z.object({
   cursor: z.string().optional(),
   sentiment: sentimentSchema.optional(),
 });
-export type ListAnalysesQuery = z.input<typeof listAnalysesQuerySchema>;
+/**
+ * The *parsed* query: coerced, with defaults applied. `z.infer` rather than
+ * `z.input` because this is the shape server code holds after validation — `limit`
+ * is a definite number, not the optional `unknown` a caller may supply.
+ *
+ * A client building a request can loosen it with `Partial<ListAnalysesQuery>`.
+ */
+export type ListAnalysesQuery = z.infer<typeof listAnalysesQuerySchema>;
 
 export const listAnalysesResponseSchema = z.object({
   analyses: z.array(analysisResponseSchema),
