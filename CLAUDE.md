@@ -29,6 +29,7 @@ below: small, boring, and navigable beats clever.
 | 6 | Click a feed row to reveal its summary | PR 6 |
 | 7 | Filter the feed by sentiment | repo done |
 | 8 | Page through the feed | repo done |
+| 9 | Remove an analysis from the feed | repo done |
 
 ### Explicitly out of scope
 
@@ -58,7 +59,8 @@ Feed page
   a list of analyzed articles, newest first
   each row, collapsed:  title, source, date, sentiment label
     → click a row → expands in place to reveal
-        summary, rationale, link to the original article, "Re-analyze"
+        summary, rationale, link to the original article,
+        "Re-analyze", "Remove"
     → filter chips: all / positive / neutral / negative
     → "Load more" (cursor-based)
 ```
@@ -89,7 +91,12 @@ Base path `/api/v1`. Every payload is defined in `api-contract/`.
 | `GET` | `/articles?q=&lang=&limit=` | Search the news provider, annotated with `analysisId` where already analyzed | 200 | 400, 429, 502 |
 | `POST` | `/analyses` | Analyze an article; replaces any previous result for that URL | 201 | 400, 429, 502 |
 | `GET` | `/analyses?limit=&cursor=&sentiment=` | The feed, newest first | 200 | 400 |
+| `DELETE` | `/analyses/:id` | Remove an analysis from the feed | 204 | 404 |
 | `GET` | `/health` | Liveness | 200 | — |
+
+`DELETE` removes only the analysis. The article row stays as a cache, so
+re-analyzing that URL reuses it, and search correctly offers "Analyze" again
+because the lookup joins through `analyses`.
 
 There is no `GET /analyses/:id`. The list response already carries each analysis in
 full, so a fetch-one endpoint would have no caller.

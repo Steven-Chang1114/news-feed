@@ -175,6 +175,47 @@ describe.skipIf(!TEST_DATABASE_URL)('repositories (integration)', () => {
     });
   });
 
+  describe('analysisRepository.delete', () => {
+    it('removes the analysis and reports that it did', async () => {
+      const analysis = await seedAnalysis();
+      expect(await analyses.delete(analysis.id)).toBe(true);
+      expect(await analyses.findById(analysis.id)).toBeNull();
+    });
+
+    it('reports false for an id that was never there, so a route can 404', async () => {
+      expect(await analyses.delete('00000000-0000-4000-8000-000000000000')).toBe(false);
+    });
+
+    it('drops the row from the feed', async () => {
+      const analysis = await seedAnalysis();
+      await analyses.delete(analysis.id);
+      expect((await analyses.list({ limit: 10 })).analyses).toHaveLength(0);
+    });
+
+    it('leaves the article behind as a cache for re-analysis', async () => {
+      const analysis = await seedAnalysis();
+      await analyses.delete(analysis.id);
+
+      const [row] = await sql<{ count: number }[]>`SELECT count(*)::int AS count FROM articles`;
+      expect(row?.count).toBe(1);
+    });
+
+    it('makes search offer "Analyze" again, since findIdsByUrls joins through analyses', async () => {
+      const analysis = await seedAnalysis();
+      await analyses.delete(analysis.id);
+      expect((await analyses.findIdsByUrls([article().url])).size).toBe(0);
+    });
+
+    it('lets the same article be analyzed again afterwards', async () => {
+      const first = await seedAnalysis({ summary: 'before' });
+      await analyses.delete(first.id);
+
+      const second = await seedAnalysis({ summary: 'after' });
+      expect(second.summary).toBe('after');
+      expect(second.id).not.toBe(first.id);
+    });
+  });
+
   describe('analysisRepository.findIdsByUrls', () => {
     it('maps only the urls that have been analyzed', async () => {
       const analysis = await seedAnalysis({ url: 'https://example.com/seen' });

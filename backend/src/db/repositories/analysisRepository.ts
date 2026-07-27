@@ -28,15 +28,17 @@ export interface UpsertAnalysisParams extends AnalysisOutput {
 }
 
 /**
- * Analyze an article, mark up search results, read the feed. `findById` is the one
- * method with no endpoint behind it — `upsert` uses it to read back the joined row
- * it just wrote.
+ * Analyze an article, remove one, mark up search results, read the feed.
+ * `findById` is the one method with no endpoint behind it — `upsert` uses it to
+ * read back the joined row it just wrote.
  */
 export interface AnalysisRepository {
   /** Stores the analysis, replacing any previous one for the same article. */
   upsert(params: UpsertAnalysisParams): Promise<AnalysisResponse>;
   /** Reads back the joined shape after `upsert`. No route exposes this. */
   findById(id: string): Promise<AnalysisResponse | null>;
+  /** Removes an analysis from the feed. False when it was already gone, so a route can 404. */
+  delete(id: string): Promise<boolean>;
   /** Article URL -> analysis id, for every URL already analyzed. One query for a whole page of search results. */
   findIdsByUrls(urls: string[]): Promise<Map<string, string>>;
   /**
@@ -130,6 +132,21 @@ export function createAnalysisRepository(sql: Sql): AnalysisRepository {
         WHERE a.id = ${id}
       `;
       return rows[0] ? toAnalysis(rows[0]) : null;
+    },
+
+    async delete(id) {
+      /**
+       * Only the analysis row. The article is deliberately left behind: it becomes a
+       * cache, so re-analyzing that URL reuses it, and because `findIdsByUrls` joins
+       * through `analyses`, search correctly offers "Analyze" again.
+       *
+       * `RETURNING id` is how we know whether anything matched — a plain DELETE
+       * cannot distinguish "removed" from "was never there", and the route needs to.
+       */
+      const rows = await sql<{ id: string }[]>`
+        DELETE FROM analyses WHERE id = ${id} RETURNING id
+      `;
+      return rows.length > 0;
     },
 
     async findIdsByUrls(urls) {
