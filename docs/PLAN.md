@@ -140,8 +140,9 @@ Vue 3 + TypeScript (Vite) · Node 22 + Express 5 · PostgreSQL via `postgres.js`
 hand-written SQL · Zod contract shared by both sides · OpenAI `gpt-4.1-nano` with
 strict Structured Outputs.
 
-Hosting: one Render service serving both the API and the built SPA, with Postgres on
-Neon (Render's free Postgres deletes itself 30 days after creation).
+Hosting: Render, described entirely by `render.yaml` — one service serving both the
+API and the built SPA, plus the Postgres it talks to. A free database is deleted 30
+days after creation, with a 14-day grace period to upgrade.
 
 ## Delivery
 
@@ -155,4 +156,4 @@ Seven PRs, each independently reviewable.
 | 4 | `feat/providers` | GNews + OpenAI behind swappable interfaces | merged |
 | 5 | `feat/rest-api` | Express 5, controllers, middleware, error envelope | merged |
 | 6 | `feat/web-client` | Vue 3 SPA | merged |
-| 7 | `chore/deploy` | Serve SPA from Express, Neon + Render, README | in review |
+| 7 | `chore/deploy` | Serve SPA from Express, Render blueprint, README | merged |
