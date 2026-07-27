@@ -1,35 +1,31 @@
 import { createAnalysisRequestSchema, listAnalysesQuerySchema } from '@news-feed/api-contract';
 import { Router } from 'express';
 import { z } from 'zod';
-import type { AnalysisRepository } from '../../db/repositories/analysisRepository';
 import { notFoundError, validationError } from '../../errors';
 import type { AnalysisService } from '../../services/analysisService';
 
 const idSchema = z.string().uuid();
 
-export function createAnalysesRouter(
-  analyses: AnalysisRepository,
-  analysisService: AnalysisService,
-): Router {
-  const router = Router();
+export function createAnalysesController(analyses: AnalysisService): Router {
+  const controller = Router();
 
-  router.get('/', async (req, res) => {
+  controller.get('/', async (req, res) => {
     const query = listAnalysesQuerySchema.safeParse(req.query);
     if (!query.success) throw validationError(query.error.flatten().fieldErrors);
 
     res.json(await analyses.list(query.data));
   });
 
-  router.post('/', async (req, res) => {
+  controller.post('/', async (req, res) => {
     const body = createAnalysisRequestSchema.safeParse(req.body);
     if (!body.success) throw validationError(body.error.flatten().fieldErrors);
 
     // 201 whether or not an analysis for this URL existed: re-analyzing produces a
     // new result that replaces the old one, so a resource is created either way.
-    res.status(201).json(await analysisService.analyze(body.data.article));
+    res.status(201).json(await analyses.analyze(body.data.article));
   });
 
-  router.delete('/:id', async (req, res) => {
+  controller.delete('/:id', async (req, res) => {
     const id = idSchema.safeParse(req.params.id);
     // A malformed id cannot match anything, so it reads as absent rather than invalid.
     if (!id.success) throw notFoundError('No such analysis');
@@ -39,5 +35,5 @@ export function createAnalysesRouter(
     res.status(204).end();
   });
 
-  return router;
+  return controller;
 }

@@ -153,6 +153,6 @@ Seven PRs, each independently reviewable.
 | 2 | `feat/api-contract` | Zod schemas for every payload | merged |
 | 3 | `feat/db-layer` | Schema, migrations, repositories | merged |
 | 4 | `feat/providers` | GNews + OpenAI behind swappable interfaces | merged |
-| 5 | `feat/rest-api` | Express 5, routes, middleware, error envelope | in review |
+| 5 | `feat/rest-api` | Express 5, controllers, middleware, error envelope | in review |
 | 6 | `feat/web-client` | Vue 3 SPA | |
 | 7 | `chore/deploy` | Serve SPA from Express, Neon + Render, README | |

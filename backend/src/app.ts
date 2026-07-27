@@ -1,24 +1,26 @@
 import cors from 'cors';
 import express, { type Express } from 'express';
-import type { AnalysisRepository } from './db/repositories/analysisRepository';
-import type { NewsProvider } from './providers/types';
-import type { AnalysisService } from './services/analysisService';
 import { errorHandler, notFoundHandler, requestId } from './http/errorHandler';
-import { createAnalysesRouter } from './http/routes/analyses';
-import { createArticlesRouter } from './http/routes/articles';
+import { createAnalysesController } from './http/controllers/analyses';
+import { createArticlesController } from './http/controllers/articles';
+import type { AnalysisService } from './services/analysisService';
+import type { ArticleService } from './services/articleService';
 
+/**
+ * Services only. Controllers talk to services and services talk to repositories, so
+ * the app never holds a repository and cannot reach past a service to one.
+ */
 export interface AppDependencies {
-  news: NewsProvider;
-  analyses: AnalysisRepository;
+  articleService: ArticleService;
   analysisService: AnalysisService;
   corsOrigin: string;
 }
 
 /**
  * Builds the app from its dependencies and never listens, so tests drive it in
- * process with fake providers and no port.
+ * process with fake services and no port.
  */
-export function createApp({ news, analyses, analysisService, corsOrigin }: AppDependencies): Express {
+export function createApp({ articleService, analysisService, corsOrigin }: AppDependencies): Express {
   const app = express();
 
   app.use(requestId);
@@ -32,8 +34,8 @@ export function createApp({ news, analyses, analysisService, corsOrigin }: AppDe
     res.json({ status: 'ok' });
   });
 
-  app.use('/api/v1/articles', createArticlesRouter(news, analyses));
-  app.use('/api/v1/analyses', createAnalysesRouter(analyses, analysisService));
+  app.use('/api/v1/articles', createArticlesController(articleService));
+  app.use('/api/v1/analyses', createAnalysesController(analysisService));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

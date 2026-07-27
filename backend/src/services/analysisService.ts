@@ -1,11 +1,19 @@
-import type { AnalysisResponse, Article } from '@news-feed/api-contract';
+import type {
+  AnalysisResponse,
+  Article,
+  ListAnalysesResponse,
+  ParsedListAnalysesQuery,
+} from '@news-feed/api-contract';
 import type { Sql } from '../db/client';
-import { createAnalysisRepository } from '../db/repositories/analysisRepository';
+import { createAnalysisRepository, type AnalysisRepository } from '../db/repositories/analysisRepository';
 import { createArticleRepository } from '../db/repositories/articleRepository';
 import type { Analyzer } from '../providers/types';
 
 export interface AnalysisService {
   analyze(article: Article): Promise<AnalysisResponse>;
+  list(query: ParsedListAnalysesQuery): Promise<ListAnalysesResponse>;
+  /** False when the analysis was already gone, so a controller can answer 404. */
+  delete(id: string): Promise<boolean>;
 }
 
 /**
@@ -13,7 +21,11 @@ export interface AnalysisService {
  * this layer: analyzing writes an article and an analysis, and an article with no
  * analysis is a silently missing feed entry.
  */
-export function createAnalysisService(sql: Sql, analyzer: Analyzer): AnalysisService {
+export function createAnalysisService(
+  sql: Sql,
+  analyzer: Analyzer,
+  analysesRepo: AnalysisRepository,
+): AnalysisService {
   return {
     async analyze(article) {
       // Outside the transaction on purpose. This takes seconds, and holding a
@@ -35,5 +47,9 @@ export function createAnalysisService(sql: Sql, analyzer: Analyzer): AnalysisSer
         });
       });
     },
+
+    list: (query) => analysesRepo.list(query),
+
+    delete: (id) => analysesRepo.delete(id),
   };
 }

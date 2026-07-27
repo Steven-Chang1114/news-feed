@@ -71,7 +71,11 @@ internal columns the wire never sees.
 **Imports** use the package name across workspaces (`@news-feed/api-contract`) and
 relative paths within one (`./prompt`, `../errors`).
 
-**SQL** lives only in `backend/src/db/repositories/`. Never in a route or a service.
+**Layers** run one way: controller → service → repository. A controller never holds a
+repository, and the app is wired with services only, so nothing can reach past a
+service to the database.
+
+**SQL** lives only in `backend/src/db/repositories/`. Never in a controller or a service.
 
 **Transactions** are opened in the service layer only. Repositories take whichever
 handle they are given and never open one; inside a transaction every query must go

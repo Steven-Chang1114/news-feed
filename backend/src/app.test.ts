@@ -2,10 +2,9 @@ import type { AnalysisResponse, Article } from '@news-feed/api-contract';
 import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 import { createApp } from './app';
-import type { AnalysisRepository } from './db/repositories/analysisRepository';
 import { rateLimitedError, upstreamError } from './errors';
-import type { NewsProvider } from './providers/types';
 import type { AnalysisService } from './services/analysisService';
+import type { ArticleService } from './services/articleService';
 
 const article: Article = {
   url: 'https://example.com/a',
@@ -28,26 +27,22 @@ const analysis: AnalysisResponse = {
   createdAt: '2026-07-26T10:00:00.000Z',
 };
 
-function buildApp(overrides: {
-  news?: Partial<NewsProvider>;
-  analyses?: Partial<AnalysisRepository>;
-  analysisService?: Partial<AnalysisService>;
-} = {}) {
-  const news = { search: vi.fn(async () => [article]), ...overrides.news } as NewsProvider;
-  const analyses = {
-    findIdsByUrls: vi.fn(async () => new Map<string, string>()),
-    list: vi.fn(async () => ({ analyses: [analysis], nextCursor: null })),
-    delete: vi.fn(async () => true),
-    upsert: vi.fn(),
-    findById: vi.fn(),
-    ...overrides.analyses,
-  } as unknown as AnalysisRepository;
+function buildApp(
+  overrides: { articleService?: Partial<ArticleService>; analysisService?: Partial<AnalysisService> } = {},
+) {
+  const articleService = {
+    search: vi.fn(async () => ({ articles: [{ ...article, analysisId: null }] })),
+    ...overrides.articleService,
+  } as ArticleService;
+
   const analysisService = {
     analyze: vi.fn(async () => analysis),
+    list: vi.fn(async () => ({ analyses: [analysis], nextCursor: null })),
+    delete: vi.fn(async () => true),
     ...overrides.analysisService,
   } as AnalysisService;
 
-  return { app: createApp({ news, analyses, analysisService, corsOrigin: '*' }), news, analyses, analysisService };
+  return { app: createApp({ articleService, analysisService, corsOrigin: '*' }), articleService, analysisService };
 }
 
 describe('GET /health', () => {
@@ -60,37 +55,18 @@ describe('GET /health', () => {
 });
 
 describe('GET /api/v1/articles', () => {
-  it('returns search results annotated with null when nothing is analyzed', async () => {
+  it('returns what the service produced', async () => {
     const response = await request(buildApp().app).get('/api/v1/articles?q=climate');
 
     expect(response.status).toBe(200);
-    expect(response.body.articles).toHaveLength(1);
     expect(response.body.articles[0]).toMatchObject({ url: article.url, analysisId: null });
   });
 
-  it('attaches the analysis id for a result already in the feed', async () => {
-    const { app } = buildApp({
-      analyses: { findIdsByUrls: vi.fn(async () => new Map([[article.url, analysis.id]])) },
-    });
-
-    const response = await request(app).get('/api/v1/articles?q=climate');
-
-    expect(response.body.articles[0].analysisId).toBe(analysis.id);
-  });
-
-  it('looks up every result url in a single call', async () => {
-    const { app, analyses } = buildApp();
-    await request(app).get('/api/v1/articles?q=climate');
-
-    expect(analyses.findIdsByUrls).toHaveBeenCalledTimes(1);
-    expect(analyses.findIdsByUrls).toHaveBeenCalledWith([article.url]);
-  });
-
-  it('passes coerced and defaulted query parameters to the provider', async () => {
-    const { app, news } = buildApp();
+  it('hands the service a coerced and defaulted query', async () => {
+    const { app, articleService } = buildApp();
     await request(app).get('/api/v1/articles?q=climate&limit=5');
 
-    expect(news.search).toHaveBeenCalledWith({ q: 'climate', lang: 'en', limit: 5 });
+    expect(articleService.search).toHaveBeenCalledWith({ q: 'climate', lang: 'en', limit: 5 });
   });
 
   it('rejects a missing query with 400 and field-level details', async () => {
@@ -102,14 +78,12 @@ describe('GET /api/v1/articles', () => {
   });
 
   it('rejects a limit above the cap rather than silently clamping', async () => {
-    const response = await request(buildApp().app).get('/api/v1/articles?q=climate&limit=500');
-
-    expect(response.status).toBe(400);
+    expect((await request(buildApp().app).get('/api/v1/articles?q=climate&limit=500')).status).toBe(400);
   });
 
   it('surfaces a provider quota failure as 429', async () => {
     const { app } = buildApp({
-      news: {
+      articleService: {
         search: vi.fn(async () => {
           throw rateLimitedError('The news provider daily request limit has been reached');
         }),
@@ -124,7 +98,7 @@ describe('GET /api/v1/articles', () => {
 
   it('surfaces a provider outage as 502', async () => {
     const { app } = buildApp({
-      news: {
+      articleService: {
         search: vi.fn(async () => {
           throw upstreamError('The news provider did not respond');
         }),
@@ -183,23 +157,21 @@ describe('GET /api/v1/analyses', () => {
   });
 
   it('applies defaults when no parameters are given', async () => {
-    const { app, analyses } = buildApp();
+    const { app, analysisService } = buildApp();
     await request(app).get('/api/v1/analyses');
 
-    expect(analyses.list).toHaveBeenCalledWith({ limit: 20 });
+    expect(analysisService.list).toHaveBeenCalledWith({ limit: 20 });
   });
 
   it('passes the sentiment filter and cursor through', async () => {
-    const { app, analyses } = buildApp();
+    const { app, analysisService } = buildApp();
     await request(app).get('/api/v1/analyses?sentiment=negative&cursor=abc&limit=5');
 
-    expect(analyses.list).toHaveBeenCalledWith({ limit: 5, sentiment: 'negative', cursor: 'abc' });
+    expect(analysisService.list).toHaveBeenCalledWith({ limit: 5, sentiment: 'negative', cursor: 'abc' });
   });
 
   it('rejects a sentiment outside the closed set', async () => {
-    const response = await request(buildApp().app).get('/api/v1/analyses?sentiment=angry');
-
-    expect(response.status).toBe(400);
+    expect((await request(buildApp().app).get('/api/v1/analyses?sentiment=angry')).status).toBe(400);
   });
 });
 
@@ -212,7 +184,7 @@ describe('DELETE /api/v1/analyses/:id', () => {
   });
 
   it('returns 404 when the analysis was already gone', async () => {
-    const { app } = buildApp({ analyses: { delete: vi.fn(async () => false) } });
+    const { app } = buildApp({ analysisService: { delete: vi.fn(async () => false) } });
 
     const response = await request(app).delete(`/api/v1/analyses/${analysis.id}`);
 
@@ -220,11 +192,11 @@ describe('DELETE /api/v1/analyses/:id', () => {
     expect(response.body.error.code).toBe('NOT_FOUND');
   });
 
-  it('returns 404 for a malformed id without reaching the database', async () => {
-    const { app, analyses } = buildApp();
+  it('returns 404 for a malformed id without reaching the service', async () => {
+    const { app, analysisService } = buildApp();
 
     expect((await request(app).delete('/api/v1/analyses/not-a-uuid')).status).toBe(404);
-    expect(analyses.delete).not.toHaveBeenCalled();
+    expect(analysisService.delete).not.toHaveBeenCalled();
   });
 });
 
@@ -245,7 +217,7 @@ describe('error envelope', () => {
 
   it('hides internals when a dependency throws something unexpected', async () => {
     const { app } = buildApp({
-      news: {
+      articleService: {
         search: vi.fn(async () => {
           throw new Error('connection string postgres://user:hunter2@host/db');
         }),
