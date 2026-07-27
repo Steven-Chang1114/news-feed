@@ -98,13 +98,19 @@ export const listAnalysesQuerySchema = z.object({
   sentiment: sentimentSchema.optional(),
 });
 /**
- * The *parsed* query: coerced, with defaults applied. `z.infer` rather than
- * `z.input` because this is the shape server code holds after validation — `limit`
- * is a definite number, not the optional `unknown` a caller may supply.
- *
- * A client building a request can loosen it with `Partial<ListAnalysesQuery>`.
+ * What a client may send. A query string is text, so `limit` may be omitted or
+ * arrive as `"20"` — this is the honest description of what crosses the wire.
  */
-export type ListAnalysesQuery = z.infer<typeof listAnalysesQuerySchema>;
+export type ListAnalysesQuery = z.input<typeof listAnalysesQuerySchema>;
+
+/**
+ * The same query once validated: coerced, with defaults applied. This is what
+ * server code holds, and `limit` here is a definite number.
+ *
+ * Two names, one schema. Nothing is restated — both are views of
+ * `listAnalysesQuerySchema`, so adding a filter still changes exactly one place.
+ */
+export type ParsedListAnalysesQuery = z.output<typeof listAnalysesQuerySchema>;
 
 export const listAnalysesResponseSchema = z.object({
   analyses: z.array(analysisResponseSchema),

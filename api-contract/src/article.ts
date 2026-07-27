@@ -43,10 +43,10 @@ export const listArticlesQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(20).default(10),
 });
 /**
- * The *parsed* query: coerced, with defaults applied. See the note on
- * `ListAnalysesQuery` — this is the shape server code holds after validation.
+ * What a client may send; see the note on `ListAnalysesQuery`. The parsed
+ * counterpart lands with the route that needs it.
  */
-export type ListArticlesQuery = z.infer<typeof listArticlesQuerySchema>;
+export type ListArticlesQuery = z.input<typeof listArticlesQuerySchema>;
 
 /**
  * Each article carries whether it is already in the user's feed.

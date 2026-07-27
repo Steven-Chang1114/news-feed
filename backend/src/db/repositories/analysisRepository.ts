@@ -1,8 +1,8 @@
 import type {
   AnalysisOutput,
   AnalysisResponse,
-  ListAnalysesQuery,
   ListAnalysesResponse,
+  ParsedListAnalysesQuery,
 } from '@news-feed/api-contract';
 import type { Sql } from '../client';
 import { decodeCursor, encodeCursor } from '../cursor';
@@ -45,7 +45,7 @@ export interface AnalysisRepository {
    * already returns contract types elsewhere. If the response ever gains a field
    * storage does not produce, that is the moment to split them.
    */
-  list(params: ListAnalysesQuery): Promise<ListAnalysesResponse>;
+  list(params: ParsedListAnalysesQuery): Promise<ListAnalysesResponse>;
 }
 
 /** Storage shape -> wire shape. The one place rows are allowed to become contract types. */

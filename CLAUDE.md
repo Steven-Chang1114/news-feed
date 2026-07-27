@@ -135,6 +135,10 @@ AnalysisWithArticleRow   what a query returns       flat, Date objects not ISO s
 - **Anything the API returns ends in `Response`** — `AnalysisResponse`,
   `ListAnalysesResponse`, `ErrorResponse`. Anything it accepts ends in `Request` or
   `Query`.
+- A query has two derived views of one schema: `ListAnalysesQuery` (`z.input`) is
+  what a client may send, since a query string is text; `ParsedListAnalysesQuery`
+  (`z.output`) is what server code holds once coerced and defaulted. Two names,
+  one schema — nothing is restated.
 - A type used in *both* directions keeps a bare name, and that bareness is the
   signal. `Article` appears inside `CreateAnalysisRequest` and inside
   `AnalysisResponse`, so it belongs to neither. Same for value types like
