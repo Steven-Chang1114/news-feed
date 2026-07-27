@@ -25,10 +25,10 @@ below: small, boring, and navigable beats clever.
 | 2 | See at a glance which results are already analyzed | contract + repo done |
 | 3 | Analyze an article — LLM summary, sentiment label, score, one-line rationale | PR 4–5 |
 | 4 | Re-analyze an article; the new result replaces the old one | repo done |
-| 5 | Feed of every stored analysis, newest first | repo done |
-| 6 | Filter the feed by sentiment | repo done |
-| 7 | Page through the feed | repo done |
-| 8 | Permalink to a single analysis | repo done |
+| 5 | Feed listing every analyzed article with its sentiment label, newest first | repo done |
+| 6 | Click a feed row to reveal its summary | PR 6 |
+| 7 | Filter the feed by sentiment | repo done |
+| 8 | Page through the feed | repo done |
 
 ### Explicitly out of scope
 
@@ -41,6 +41,8 @@ Cut deliberately, not forgotten. Each was considered and rejected as unasked-for
 - Persisting search results that were never analyzed
 - Semantic search, embeddings, `pgvector`
 - Docker for the app itself, CI pipelines
+- A dedicated page or permalink for a single analysis — the feed reveals summaries
+  in place, so a second page would show nothing the feed does not
 
 ## User flow
 
@@ -48,29 +50,32 @@ Cut deliberately, not forgotten. Each was considered and rejected as unasked-for
 Search page
   type a query
     → results list, each card showing title, source, date, snippet
-      → card already analyzed?  → "View analysis" link
-      → not analyzed?           → "Analyze" button
-        → click: card shows a pending state
-        → done: card links to the new analysis
+      → not analyzed?      → "Analyze" button
+        → click: pending state, then the row moves to the feed
+      → already analyzed?  → "Analyzed" state, linking to the feed
 
 Feed page
-  every stored analysis, newest first
+  a list of analyzed articles, newest first
+  each row, collapsed:  title, source, date, sentiment label
+    → click a row → expands in place to reveal
+        summary, rationale, link to the original article, "Re-analyze"
     → filter chips: all / positive / neutral / negative
     → "Load more" (cursor-based)
-    → each card: title, source, sentiment chip, summary, rationale,
-      link to the original article, "Re-analyze"
-
-Analysis page
-  one analysis, reachable by permalink from a search result
 ```
+
+The feed is a scannable list first and a reader second: the sentiment label is
+visible for every row at a glance, and the summary is one click away without
+leaving the page.
 
 ## Pages
 
 | Route | Purpose | Notes |
 | --- | --- | --- |
 | `/` | Search | Debounced input, loading / empty / error states |
-| `/feed` | Stored analyses | Sentiment filter, cursor paging |
-| `/analyses/:id` | Single analysis | Permalink target from search results |
+| `/feed` | Analyzed articles | Rows expand in place; sentiment filter; cursor paging |
+
+Two pages, not three. A single-analysis page would render exactly what an expanded
+feed row already shows.
 
 UI is plain CSS with custom-property tokens and a system font stack. No component
 or styling library — this is a stated requirement.
@@ -84,8 +89,10 @@ Base path `/api/v1`. Every payload is defined in `api-contract/`.
 | `GET` | `/articles?q=&lang=&limit=` | Search the news provider, annotated with `analysisId` where already analyzed | 200 | 400, 429, 502 |
 | `POST` | `/analyses` | Analyze an article; replaces any previous result for that URL | 201 | 400, 429, 502 |
 | `GET` | `/analyses?limit=&cursor=&sentiment=` | The feed, newest first | 200 | 400 |
-| `GET` | `/analyses/:id` | One analysis | 200 | 404 |
 | `GET` | `/health` | Liveness | 200 | — |
+
+There is no `GET /analyses/:id`. The list response already carries each analysis in
+full, so a fetch-one endpoint would have no caller.
 
 `q` is required on `/articles`: there is no "all news" collection to return.
 
@@ -121,12 +128,18 @@ would reorder rows underneath someone paginating.
 
 ```
 AnalysisOutput           what the model returns     no id, no provenance
-Analysis                 what the API returns       output + id, article, provenance
+AnalysisResponse         what the API returns       output + id, article, provenance
 AnalysisWithArticleRow   what a query returns       flat, Date objects not ISO strings
 ```
 
-- Everything exported from `api-contract/` is a wire type. Resources take no suffix;
-  wrappers state what they are (`ListAnalysesResponse`, `CreateAnalysisRequest`).
+- **Anything the API returns ends in `Response`** — `AnalysisResponse`,
+  `ListAnalysesResponse`, `ErrorResponse`. Anything it accepts ends in `Request` or
+  `Query`.
+- A type used in *both* directions keeps a bare name, and that bareness is the
+  signal. `Article` appears inside `CreateAnalysisRequest` and inside
+  `AnalysisResponse`, so it belongs to neither. Same for value types like
+  `Sentiment`, and for `AnalysisOutput`, which is a model-layer shape and never
+  touches HTTP.
 - `Row` types live in `backend/src/db/` and never escape the repository layer.
 - Repository method `foo` takes `FooParams`; it returns a contract type where one
   fits, and `FooResult` only where none does.
@@ -149,6 +162,20 @@ defended out loud, without AI, in the next round.
 
 **Scope discipline.** If the brief does not ask for it and no existing code needs it,
 it does not ship.
+
+## Before opening any PR
+
+Run through this every time. The doc items are here because a plan that silently
+goes stale is worse than no plan — a reader trusts it.
+
+- [ ] `npm run typecheck` clean
+- [ ] `npm test` passing, and new behaviour has a test
+- [ ] **Feature table above updated** — statuses reflect what actually landed
+- [ ] **Delivery table below updated** — this PR's row marked
+- [ ] **`README.md` roadmap checkboxes updated** to match
+- [ ] Anything cut or deferred is written into *Explicitly out of scope*, not just dropped
+- [ ] No secret in the diff (`git diff --cached | grep -iE 'sk-|api[_-]?key'`)
+- [ ] Claims in the PR description were verified by running something, not assumed
 
 ## Delivery
 

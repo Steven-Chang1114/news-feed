@@ -27,7 +27,7 @@ export type Sentiment = z.infer<typeof sentimentSchema>;
  * What the analyzer must return. This is the boundary between "the model said
  * something" and "we are willing to store it".
  *
- * Kept separate from `analysisSchema` because it holds no identity and no
+ * Kept separate from `analysisResponseSchema` because it holds no identity and no
  * provenance — it is a value produced by a model, not a resource that exists.
  */
 export const analysisOutputSchema = z.object({
@@ -56,7 +56,7 @@ export type AnalysisOutput = z.infer<typeof analysisOutputSchema>;
  * relationship is stated once and the stored form inherits the same constraints
  * the model output is held to.
  */
-export const analysisSchema = analysisOutputSchema.extend({
+export const analysisResponseSchema = analysisOutputSchema.extend({
   id: z.string().uuid(),
   article: articleSchema,
   /** Provenance: which model and prompt produced this result. */
@@ -64,7 +64,7 @@ export const analysisSchema = analysisOutputSchema.extend({
   promptVersion: z.string(),
   createdAt: z.string().datetime({ offset: true }),
 });
-export type Analysis = z.infer<typeof analysisSchema>;
+export type AnalysisResponse = z.infer<typeof analysisResponseSchema>;
 
 /* -------------------------------------------------------------------------- */
 /* POST /api/v1/analyses                                                       */
@@ -100,7 +100,7 @@ export const listAnalysesQuerySchema = z.object({
 export type ListAnalysesQuery = z.input<typeof listAnalysesQuerySchema>;
 
 export const listAnalysesResponseSchema = z.object({
-  analyses: z.array(analysisSchema),
+  analyses: z.array(analysisResponseSchema),
   /** Null means this is the last page. */
   nextCursor: z.string().nullable(),
 });
