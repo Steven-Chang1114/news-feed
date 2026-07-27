@@ -1,12 +1,12 @@
 import type { Article } from '@news-feed/api-contract';
-import type { Sql } from '../client';
+import type { Db } from '../client';
 
 export interface ArticleRepository {
   /** Inserts the article, or refreshes it if we already hold that URL. Returns its id. */
   upsert(article: Article, raw: unknown): Promise<string>;
 }
 
-export function createArticleRepository(sql: Sql): ArticleRepository {
+export function createArticleRepository(sql: Db): ArticleRepository {
   return {
     async upsert(article, raw) {
       /**

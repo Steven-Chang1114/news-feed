@@ -31,4 +31,16 @@ export function createClient(connectionString: string) {
   });
 }
 
+/** The connection pool. Only the composition root and the migrator hold one. */
 export type Sql = ReturnType<typeof createClient>;
+
+/**
+ * What a repository accepts: the pool *or* a transaction handle.
+ *
+ * `Sql` and `TransactionSql` both extend postgres.js's `ISql` but neither is
+ * assignable to the other — `Sql` has `begin`/`end`, `TransactionSql` has
+ * `savepoint`. Taking the shared base is what lets a repository be composed into a
+ * transaction without knowing it is in one, which is required for analyzing to
+ * write the article and the analysis atomically.
+ */
+export type Db = postgres.ISql;

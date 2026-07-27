@@ -175,6 +175,86 @@ describe.skipIf(!TEST_DATABASE_URL)('repositories (integration)', () => {
     });
   });
 
+  describe('writing both tables atomically', () => {
+    /**
+     * Analyzing writes an article and an analysis. A partial write — an article with
+     * no analysis — would show as a silently missing feed entry, so the two must
+     * commit together or not at all. These tests pin that the repositories can be
+     * bound to a transaction handle and that a failure rolls the whole thing back.
+     */
+    it('commits both rows together', async () => {
+      const analysis = await sql.begin(async (tx) => {
+        const articleId = await createArticleRepository(tx).upsert(article(), { provider: 'test' });
+        return createAnalysisRepository(tx).upsert({
+          articleId,
+          summary: 'A summary',
+          sentiment: 'positive',
+          sentimentScore: 0.5,
+          rationale: 'Because.',
+          model: MODEL,
+          promptVersion: PROMPT_VERSION,
+          tokensIn: null,
+          tokensOut: null,
+          latencyMs: null,
+        });
+      });
+
+      expect(await analyses.findById(analysis.id)).not.toBeNull();
+    });
+
+    it('rolls the article back when the analysis write fails', async () => {
+      await expect(
+        sql.begin(async (tx) => {
+          await createArticleRepository(tx).upsert(article(), { provider: 'test' });
+          return createAnalysisRepository(tx).upsert({
+            articleId: '00000000-0000-4000-8000-000000000000', // no such article: FK violation
+            summary: 's',
+            sentiment: 'positive',
+            sentimentScore: 0,
+            rationale: 'r',
+            model: MODEL,
+            promptVersion: PROMPT_VERSION,
+            tokensIn: null,
+            tokensOut: null,
+            latencyMs: null,
+          });
+        }),
+      ).rejects.toThrow();
+
+      // The article must not survive the failed transaction.
+      const [row] = await sql<{ count: number }[]>`SELECT count(*)::int AS count FROM articles`;
+      expect(row?.count).toBe(0);
+    });
+
+    it('is safe to retry, because both writes are idempotent', async () => {
+      // Covers the one case a transaction cannot: the commit succeeds but the
+      // acknowledgement is lost, so the caller retries not knowing the outcome.
+      const write = () =>
+        sql.begin(async (tx) => {
+          const articleId = await createArticleRepository(tx).upsert(article(), {});
+          return createAnalysisRepository(tx).upsert({
+            articleId,
+            summary: 'A summary',
+            sentiment: 'positive',
+            sentimentScore: 0.5,
+            rationale: 'Because.',
+            model: MODEL,
+            promptVersion: PROMPT_VERSION,
+            tokensIn: null,
+            tokensOut: null,
+            latencyMs: null,
+          });
+        });
+
+      const first = await write();
+      const second = await write();
+
+      expect(second.id).toBe(first.id);
+      const [row] = await sql<{ count: number }[]>`SELECT count(*)::int AS count FROM analyses`;
+      expect(row?.count).toBe(1);
+    });
+  });
+
   describe('analysisRepository.delete', () => {
     it('removes the analysis and reports that it did', async () => {
       const analysis = await seedAnalysis();

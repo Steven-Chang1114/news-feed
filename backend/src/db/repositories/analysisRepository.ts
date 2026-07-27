@@ -4,7 +4,7 @@ import type {
   ListAnalysesResponse,
   ParsedListAnalysesQuery,
 } from '@news-feed/api-contract';
-import type { Sql } from '../client';
+import type { Db } from '../client';
 import { decodeCursor, encodeCursor } from '../cursor';
 import type { AnalysisWithArticleRow } from '../types';
 
@@ -73,7 +73,7 @@ function toAnalysis(row: AnalysisWithArticleRow): AnalysisResponse {
   };
 }
 
-export function createAnalysisRepository(sql: Sql): AnalysisRepository {
+export function createAnalysisRepository(sql: Db): AnalysisRepository {
   // Every read returns the same columns, so the projection is written once. Explicit
   // rather than `SELECT *`, so adding an internal column cannot start shipping it.
   const columns = sql`
