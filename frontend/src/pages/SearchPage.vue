@@ -43,7 +43,8 @@
 
 <script setup lang="ts">
 import type { ListArticlesResponse } from '@news-feed/api-contract';
-import { ref, watch } from 'vue';
+import { debounce } from 'lodash-es';
+import { onUnmounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { analyzeArticle, searchArticles } from '../api';
 
@@ -63,17 +64,24 @@ const analyzing = ref<string | null>(null);
  * Debounced because the news provider allows 100 requests a day: one request per
  * keystroke would spend the daily budget in a single sentence.
  */
-let timer: ReturnType<typeof setTimeout> | undefined;
+const debouncedSearch = debounce((q: string) => void search(q), 400);
+
 watch(query, (value) => {
-  clearTimeout(timer);
   const trimmed = value.trim();
   if (trimmed.length < 2) {
+    // Cancel as well as clear: a search queued for a longer query would otherwise
+    // still fire after the box has been emptied.
+    debouncedSearch.cancel();
     results.value = [];
     searched.value = false;
     return;
   }
-  timer = setTimeout(() => void search(trimmed), 400);
+  debouncedSearch(trimmed);
 });
+
+// A pending search must not outlive the page: it would spend a request from a
+// 100/day budget on results nobody will see.
+onUnmounted(() => debouncedSearch.cancel());
 
 async function search(q: string) {
   loading.value = true;
