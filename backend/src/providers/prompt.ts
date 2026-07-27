@@ -55,10 +55,10 @@ const SYSTEM_PROMPT = [
   'reporting; prefer it over a weak positive or negative.',
 ].join('\n');
 
-export function buildUserPrompt(article: Article): string {
+export function buildMessages(article: Article) {
   const content = article.content?.slice(0, MAX_CONTENT_CHARS) ?? null;
 
-  return [
+  const details = [
     `Title: ${article.title}`,
     article.sourceName ? `Source: ${article.sourceName}` : null,
     article.description ? `Description: ${article.description}` : null,
@@ -66,11 +66,9 @@ export function buildUserPrompt(article: Article): string {
   ]
     .filter((line): line is string => line !== null)
     .join('\n');
-}
 
-export function buildMessages(article: Article) {
   return [
     { role: 'system' as const, content: SYSTEM_PROMPT },
-    { role: 'user' as const, content: buildUserPrompt(article) },
+    { role: 'user' as const, content: details },
   ];
 }

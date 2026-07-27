@@ -17,6 +17,19 @@ yes, then write it. This applies to source, tests, schemas and config. Updating
 it does not ship. Name the line in the spec or the existing code that requires a new
 field, module or abstraction; if there is none, do not build it.
 
+**Never make production code longer to accommodate a test.** Tests adapt to the
+code, not the other way round. A wrapper, an extra type or an injected function
+added so a test is easier to write is a cost paid by every future reader for a
+convenience only the test enjoys. Keeping the network out of a test is a real
+requirement; the smallest thing that achieves it wins, and a cast in the test file
+is cheaper than an abstraction in the source.
+
+**Before adding an abstraction, name the second implementation.** If it cannot be
+named, and will not exist, do not add the seam. A test fake counts once — two seams
+serving the same fake means one of them is redundant.
+
+**Simplicity is the default.** When two designs work, ship the shorter one.
+
 ## Type naming
 
 One concept, three shapes:
