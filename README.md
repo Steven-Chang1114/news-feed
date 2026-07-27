@@ -50,8 +50,28 @@ npm run dev                   # backend on :3000, frontend on :5173
 
 Get a free news API key at [gnews.io](https://gnews.io) (100 requests/day).
 
-> **Secrets:** `.env` is gitignored and must never be committed. In production these
-> are set as environment variables on the host, not in a file.
+> **Secrets:** `.env` is gitignored and must never be committed. In production only
+> `GNEWS_API_KEY` and `OPENAI_API_KEY` are set by hand, in the Render dashboard;
+> `DATABASE_URL` is injected from the database in the blueprint.
+
+## Tests
+
+```bash
+npm run typecheck
+npm test
+```
+
+The repository tests execute every query against a real database, so they need one
+of their own:
+
+```bash
+docker exec news-feed-postgres psql -U newsfeed -d postgres -c "CREATE DATABASE newsfeed_test"
+```
+
+`TEST_DATABASE_URL` is deliberately separate from `DATABASE_URL`, because these
+tests drop and recreate every table — aiming them at a real database by accident
+should be impossible rather than unlikely. Unset, they report as skipped rather than
+passing silently.
 
 ## Layout
 
