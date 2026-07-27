@@ -1,8 +1,8 @@
 # Render blueprint. One web service serving the API and the built client, so there
-# is a single origin and no CORS in production.
+# is a single origin and no CORS in production, plus the Postgres it talks to.
 #
-# The database is not declared here: Render's free Postgres is deleted 30 days after
-# creation, so DATABASE_URL points at Neon instead.
+# The free database is deleted 30 days after creation, with a 14-day grace period to
+# upgrade. See the hosting note in README.md.
 services:
   - type: web
     name: news-feed
@@ -21,11 +21,23 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      # sync: false keeps the value out of the repository — set each in the Render
-      # dashboard, where it is stored encrypted.
+      # Injected by Render from the database below, so the connection string is
+      # never copied by hand and never leaves the platform.
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: news-feed-db
+          property: connectionString
+      # sync: false keeps these out of the repository — set each in the Render
+      # dashboard, where it is stored encrypted.
       - key: GNEWS_API_KEY
         sync: false
       - key: OPENAI_API_KEY
         sync: false
+
+databases:
+  - name: news-feed-db
+    plan: free
+    region: oregon
+    # Reached over Render's private network from the service above, so it is not
+    # exposed to the public internet.
+    ipAllowList: []

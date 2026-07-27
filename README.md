@@ -66,44 +66,32 @@ frontend/       Vue 3 single-page app
 | Piece | Where | Notes |
 | --- | --- | --- |
 | Frontend + backend | Single Render service | Express serves the built Vue app, so one origin and no CORS in production |
-| Database | Neon | Free tier is permanent. Render's free Postgres is deleted 30 days after creation, which would break the app with no warning |
+| Database | Render Postgres | Declared in the same blueprint, so `DATABASE_URL` is injected rather than copied, and the database is reached over Render's private network |
 
 Two free-tier behaviours to be aware of, both expected rather than broken:
 
 - Render spins a free service down after ~15 minutes idle, so the first request
   after a quiet period can take 30–60s.
-- Neon suspends compute after 5 minutes idle and bills 100 compute-hours/month.
-  The Postgres client sets `idle_timeout` so connections don't pin the database
-  awake — without it, an always-open pool would exhaust the monthly allowance in
-  about four days.
+- **A free database is deleted 30 days after it is created**, with a 14-day grace
+  period to upgrade. Upgrading is a plan change in the dashboard and needs no
+  redeploy.
 
 ### Deploying
 
-1. Create a Postgres database at [neon.com](https://neon.com) and copy its
-   connection string. Use the direct endpoint rather than the `-pooler` one: this is
-   a long-lived server with its own pool.
-2. In [Render](https://render.com), create a Blueprint from this repository.
-   `render.yaml` describes the service; the build runs `npm ci && npm run build` and
-   the start command applies migrations before serving.
-3. Set three environment variables in the Render dashboard, where they are stored
-   encrypted: `DATABASE_URL`, `GNEWS_API_KEY`, `OPENAI_API_KEY`. They are marked
-   `sync: false` in the blueprint precisely so they never live in the repository.
+1. In [Render](https://render.com), create a Blueprint from this repository.
+   `render.yaml` provisions the web service and its database together; the build
+   runs `npm ci && npm run build` and the start command applies migrations before
+   serving.
+2. Set two environment variables in the Render dashboard, where they are stored
+   encrypted: `GNEWS_API_KEY` and `OPENAI_API_KEY`. They are marked `sync: false`
+   in the blueprint precisely so they never live in the repository.
+
+`DATABASE_URL` needs no step of its own: Render injects it from the database in the
+blueprint, so the connection string is never handled by hand.
 
 `npm run build` produces `frontend/dist` and `backend/dist`; `npm start` migrates,
 then serves the API and that built client from one process. Running those two
 commands locally reproduces the deployed setup exactly.
-
-## What I would do next
-
-- **Cache search results server-side** by `(q, lang, limit)`. The free news tier
-  allows 100 requests a day, and repeat searches currently spend one each.
-- **Evaluate the prompt.** Every analysis stores `model`, `prompt_version`, token
-  counts and latency, which is the data an eval needs; what is missing is a labelled
-  set to score changes against.
-- **Rate-limit `POST /analyses`.** Nothing currently stops a script from spending
-  the OpenAI budget.
-- **Structured logging with the request id.** It is already generated and returned
-  in every error; it is not yet written to a log line.
 
 ## Roadmap
 
