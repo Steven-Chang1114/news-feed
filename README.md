@@ -4,7 +4,8 @@ Search recent news, run an LLM over an article you pick to get a summary and a
 sentiment score, and build up a personal digest you can scan by mood.
 
 > **Status:** in progress. This repo is being built as a sequence of reviewable PRs —
-> see [Roadmap](#roadmap).
+> see [Roadmap](#roadmap). Full scope, user flow, API and data model are in
+> [docs/PLAN.md](docs/PLAN.md).
 
 ## Stack
 
