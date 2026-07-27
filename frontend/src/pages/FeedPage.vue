@@ -1,3 +1,68 @@
+<template>
+  <div class="filters">
+    <button :aria-pressed="filter === null" @click="applyFilter(null)">All</button>
+    <button
+      v-for="sentiment in SENTIMENTS"
+      :key="sentiment"
+      class="capitalize"
+      :aria-pressed="filter === sentiment"
+      @click="applyFilter(sentiment)"
+    >
+      {{ sentiment }}
+    </button>
+  </div>
+
+  <p v-if="error" class="error">{{ error }}</p>
+
+  <p v-if="loading && !analyses.length" class="state">Loading…</p>
+
+  <p v-else-if="!analyses.length" class="state">
+    Nothing here yet. Search for an article and analyze it.
+  </p>
+
+  <article v-for="analysis in analyses" :key="analysis.id" class="row">
+    <!-- The whole row header toggles, so the summary is one click away without
+         leaving the page and without a second request. -->
+    <button
+      type="button"
+      class="row-toggle"
+      :aria-expanded="expanded === analysis.id"
+      :aria-label="`Summary of ${analysis.article.title}`"
+      @click="expanded = expanded === analysis.id ? null : analysis.id"
+    >
+      <p class="row-title">{{ analysis.article.title }}</p>
+      <p class="meta">
+        <span :class="['chip', `chip-${analysis.sentiment}`]">{{ analysis.sentiment }}</span>
+        ·
+        {{ analysis.article.sourceName ?? 'Unknown source' }}
+        <template v-if="analysis.article.publishedAt">
+          · {{ formatDate(analysis.article.publishedAt) }}
+        </template>
+      </p>
+    </button>
+
+    <div v-if="expanded === analysis.id">
+      <p class="summary">{{ analysis.summary }}</p>
+
+      <div class="row-actions">
+        <a :href="analysis.article.url" target="_blank" rel="noreferrer noopener" class="meta">
+          Open original
+        </a>
+        <button :disabled="busy === analysis.id" @click="reanalyze(analysis)">
+          {{ busy === analysis.id ? 'Working…' : 'Re-analyze' }}
+        </button>
+        <button :disabled="busy === analysis.id" @click="remove(analysis)">Remove</button>
+      </div>
+    </div>
+  </article>
+
+  <p v-if="nextCursor" class="load-more">
+    <button :disabled="loading" @click="load({ append: true })">
+      {{ loading ? 'Loading…' : 'Load more' }}
+    </button>
+  </p>
+</template>
+
 <script setup lang="ts">
 import { SENTIMENTS, type AnalysisResponse, type Sentiment } from '@news-feed/api-contract';
 import { onMounted, ref } from 'vue';
@@ -70,72 +135,83 @@ function formatDate(iso: string | null) {
 onMounted(load);
 </script>
 
-<template>
-  <div class="filters">
-    <button :aria-pressed="filter === null" @click="applyFilter(null)">All</button>
-    <button
-      v-for="sentiment in SENTIMENTS"
-      :key="sentiment"
-      class="capitalize"
-      :aria-pressed="filter === sentiment"
-      @click="applyFilter(sentiment)"
-    >
-      {{ sentiment }}
-    </button>
-  </div>
+<style scoped>
+.filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
 
-  <p v-if="error" class="error">{{ error }}</p>
+.filters button[aria-pressed='true'] {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
 
-  <p v-if="loading && !analyses.length" class="state">Loading…</p>
+.capitalize {
+  text-transform: capitalize;
+}
 
-  <p v-else-if="!analyses.length" class="state">
-    Nothing here yet. Search for an article and analyze it.
-  </p>
+/*
+ * The row header is the toggle, so the target is the full width of the row rather
+ * than a small chevron. `all: unset` strips the button's own appearance; the focus
+ * ring is put back, because unsetting it would leave keyboard users with no
+ * indication of where they are.
+ */
+.row-toggle {
+  all: unset;
+  display: block;
+  width: 100%;
+  cursor: pointer;
+}
 
-  <article v-for="analysis in analyses" :key="analysis.id" class="row">
-    <!-- The whole row toggles, so the summary is one click away without leaving the
-         page and without a second request. -->
-    <button
-      type="button"
-      class="row-toggle"
-      :aria-expanded="expanded === analysis.id"
-      :aria-label="`Summary of ${analysis.article.title}`"
-      @click="expanded = expanded === analysis.id ? null : analysis.id"
-    >
-      <p class="row-title">{{ analysis.article.title }}</p>
-      <p class="meta">
-        <span :class="['chip', `chip-${analysis.sentiment}`]">{{ analysis.sentiment }}</span>
-        ·
-        {{ analysis.article.sourceName ?? 'Unknown source' }}
-        <template v-if="analysis.article.publishedAt">
-          · {{ formatDate(analysis.article.publishedAt) }}
-        </template>
-      </p>
-    </button>
+/*
+ * `all: unset` does not survive the global `button:hover` rule, which is more
+ * specific and would paint a square grey block inside the rounded card. The cursor
+ * already signals that the row is clickable.
+ */
+.row-toggle:hover {
+  background: none;
+}
 
-    <div v-if="expanded === analysis.id">
-      <p class="summary">{{ analysis.summary }}</p>
+.row-toggle:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
 
-      <div class="row-actions">
-        <a
-          :href="analysis.article.url"
-          target="_blank"
-          rel="noreferrer noopener"
-          class="meta"
-        >
-          Open original
-        </a>
-        <button :disabled="busy === analysis.id" @click="reanalyze(analysis)">
-          {{ busy === analysis.id ? 'Working…' : 'Re-analyze' }}
-        </button>
-        <button :disabled="busy === analysis.id" @click="remove(analysis)">Remove</button>
-      </div>
-    </div>
-  </article>
+/* Sentiment is the only saturated colour in the interface. */
+.chip {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: capitalize;
+}
 
-  <p v-if="nextCursor" class="center">
-    <button :disabled="loading" @click="load({ append: true })">
-      {{ loading ? 'Loading…' : 'Load more' }}
-    </button>
-  </p>
-</template>
+.chip-positive {
+  color: var(--positive);
+  background: var(--positive-bg);
+}
+
+.chip-neutral {
+  color: var(--neutral);
+  background: var(--neutral-bg);
+}
+
+.chip-negative {
+  color: var(--negative);
+  background: var(--negative-bg);
+}
+
+.summary {
+  margin: var(--gap) 0 0;
+  padding-top: var(--gap);
+  border-top: 1px solid var(--border);
+}
+
+.load-more {
+  text-align: center;
+}
+</style>

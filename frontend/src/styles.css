@@ -1,5 +1,7 @@
 /*
- * Plain CSS, no framework. Tokens first so a colour or spacing change happens once.
+ * Tokens, resets, and the few primitives both pages render. Anything belonging to a
+ * single component lives in that component's scoped block instead.
+ *
  * The palette is deliberately near-monochrome: the only saturated colour in the app
  * is sentiment, so it reads as information rather than decoration.
  */
@@ -60,49 +62,9 @@ button:disabled {
   opacity: 0.55;
 }
 
-input {
-  font: inherit;
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg);
-  color: var(--text);
-}
-
-input:focus-visible,
 button:focus-visible {
   outline: 2px solid var(--text);
   outline-offset: 1px;
-}
-
-.page {
-  max-width: var(--page);
-  margin: 0 auto;
-  padding: 24px 16px 64px;
-}
-
-.nav {
-  display: flex;
-  gap: 20px;
-  align-items: baseline;
-  border-bottom: 1px solid var(--border);
-  padding: 16px;
-}
-
-.nav a {
-  text-decoration: none;
-  color: var(--text-muted);
-}
-
-.nav a.router-link-active {
-  color: var(--text);
-  font-weight: 600;
-}
-
-.brand {
-  font-weight: 700;
-  margin-right: auto;
 }
 
 /* A row is the shared unit of both pages: a bordered block with a title and meta. */
@@ -131,72 +93,6 @@ button:focus-visible {
   flex-wrap: wrap;
 }
 
-/* Sentiment is the only colour in the interface. */
-.chip {
-  display: inline-block;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 999px;
-  text-transform: capitalize;
-}
-
-.chip-positive {
-  color: var(--positive);
-  background: var(--positive-bg);
-}
-
-.chip-neutral {
-  color: var(--neutral);
-  background: var(--neutral-bg);
-}
-
-.chip-negative {
-  color: var(--negative);
-  background: var(--negative-bg);
-}
-
-.filters {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-}
-
-.filters button[aria-pressed='true'] {
-  background: var(--text);
-  color: var(--bg);
-  border-color: var(--text);
-}
-
-/*
- * The whole row header is the toggle, so the target is the full width of the row
- * rather than a small chevron. `all: unset` strips the button's own appearance;
- * the focus ring is put back, because unsetting it would leave keyboard users with
- * no indication of where they are.
- */
-.row-toggle {
-  all: unset;
-  display: block;
-  width: 100%;
-  cursor: pointer;
-}
-
-.row-toggle:focus-visible {
-  outline: 2px solid var(--text);
-  outline-offset: 2px;
-}
-
-.capitalize {
-  text-transform: capitalize;
-}
-
-.summary {
-  margin: var(--gap) 0 0;
-  padding-top: var(--gap);
-  border-top: 1px solid var(--border);
-}
-
 .state {
   color: var(--text-muted);
   padding: 32px 0;
@@ -209,8 +105,4 @@ button:focus-visible {
   border-radius: var(--radius);
   padding: 10px var(--gap);
   margin-bottom: var(--gap);
-}
-
-.center {
-  text-align: center;
 }
