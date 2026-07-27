@@ -82,7 +82,7 @@ Two free-tier behaviours to be aware of, both expected rather than broken:
 - [x] Workspace scaffold, tooling, local Postgres
 - [x] API contract
 - [x] Database schema, migrations, repositories
-- [ ] GNews + OpenAI providers behind swappable interfaces
+- [x] GNews + OpenAI providers behind swappable interfaces
 - [ ] REST API
 - [ ] Vue 3 client
 - [ ] Deploy + architecture notes

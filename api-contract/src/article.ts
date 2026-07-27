@@ -40,6 +40,12 @@ export const listArticlesQuerySchema = z.object({
 export type ListArticlesQuery = z.input<typeof listArticlesQuerySchema>;
 
 /**
+ * The query once validated: coerced, with defaults applied, which is what server
+ * code holds. Both types are views of one schema.
+ */
+export type ParsedListArticlesQuery = z.output<typeof listArticlesQuerySchema>;
+
+/**
  * Each article carries whether it is already in the user's feed, so a card knows
  * its own state and can link straight to the stored analysis.
  *

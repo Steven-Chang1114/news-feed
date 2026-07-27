@@ -21,9 +21,9 @@ below: small, boring, and navigable beats clever.
 
 | # | Feature | Status |
 | --- | --- | --- |
-| 1 | Search recent news by keyword | contract + repo done |
+| 1 | Search recent news by keyword | provider done, needs route |
 | 2 | See at a glance which results are already analyzed | contract + repo done |
-| 3 | Analyze an article — LLM summary, sentiment label, score, one-line rationale | PR 4–5 |
+| 3 | Analyze an article — LLM summary, sentiment label, score, one-line rationale | provider done, needs route |
 | 4 | Re-analyze an article; the new result replaces the old one | repo done |
 | 5 | Feed listing every analyzed article with its sentiment label, newest first | repo done |
 | 6 | Click a feed row to reveal its summary | PR 6 |
@@ -102,6 +102,10 @@ There is no `GET /analyses/:id`. The list response already carries each analysis
 full, so a fetch-one endpoint would have no caller.
 
 `q` is required on `/articles`: there is no "all news" collection to return.
+
+The GNews free tier delays articles by 12 hours and truncates `content` to roughly
+200 characters, so "recent" means the last day rather than the last hour, and a
+summary describes the excerpt it was given.
 
 Every failure uses one envelope — `{ error: { code, message, details?, requestId } }`
 — so a client writes one handler rather than branching on status codes.
@@ -211,7 +215,7 @@ Seven PRs, each independently reviewable.
 | 1 | `chore/scaffold-workspace` | Workspaces, tsconfig, Docker Postgres, secrets handling | merged |
 | 2 | `feat/api-contract` | Zod schemas for every payload | merged |
 | 3 | `feat/db-layer` | Schema, migrations, repositories | in review |
-| 4 | `feat/providers` | GNews + OpenAI behind swappable interfaces | next |
+| 4 | `feat/providers` | GNews + OpenAI behind swappable interfaces | in review |
 | 5 | `feat/rest-api` | Express 5, routes, middleware, error envelope | |
 | 6 | `feat/web-client` | Vue 3 SPA | |
 | 7 | `chore/deploy` | Serve SPA from Express, Neon + Render, README | |
