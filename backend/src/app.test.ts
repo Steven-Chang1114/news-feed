@@ -31,7 +31,7 @@ function buildApp(
   overrides: { articleService?: Partial<ArticleService>; analysisService?: Partial<AnalysisService> } = {},
 ) {
   const articleService = {
-    search: vi.fn(async () => ({ articles: [{ ...article, analysisId: null }] })),
+    search: vi.fn(async () => ({ results: [{ ...article, analysisId: null }] })),
     ...overrides.articleService,
   } as ArticleService;
 
@@ -59,7 +59,7 @@ describe('GET /api/v1/articles', () => {
     const response = await request(buildApp().app).get('/api/v1/articles?q=climate');
 
     expect(response.status).toBe(200);
-    expect(response.body.articles[0]).toMatchObject({ url: article.url, analysisId: null });
+    expect(response.body.results[0]).toMatchObject({ url: article.url, analysisId: null });
   });
 
   it('hands the service a coerced and defaulted query', async () => {

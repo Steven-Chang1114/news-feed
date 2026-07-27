@@ -19,7 +19,7 @@ export function createArticleService(
       const analysisIds = await analysisRepo.findIdsByUrls(articles.map((article) => article.url));
 
       return {
-        articles: articles.map((article) => ({
+        results: articles.map((article) => ({
           ...article,
           analysisId: analysisIds.get(article.url) ?? null,
         })),

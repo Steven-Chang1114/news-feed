@@ -42,18 +42,16 @@
 </template>
 
 <script setup lang="ts">
-import type { ListArticlesResponse } from '@news-feed/api-contract';
+import type { SearchResult } from '@news-feed/api-contract';
 import { debounce } from 'lodash-es';
 import { onUnmounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { analyzeArticle, searchArticles } from '../api';
 
-type Result = ListArticlesResponse['articles'][number];
-
 const router = useRouter();
 
 const query = ref('');
-const results = ref<Result[]>([]);
+const results = ref<SearchResult[]>([]);
 const loading = ref(false);
 const error = ref('');
 const searched = ref(false);
@@ -87,7 +85,7 @@ async function search(q: string) {
   loading.value = true;
   error.value = '';
   try {
-    results.value = (await searchArticles(q)).articles;
+    results.value = (await searchArticles(q)).results;
   } catch (caught) {
     error.value = (caught as Error).message;
     results.value = [];
@@ -97,7 +95,7 @@ async function search(q: string) {
   }
 }
 
-async function analyze(result: Result) {
+async function analyze(result: SearchResult) {
   analyzing.value = result.url;
   error.value = '';
   try {
