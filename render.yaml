@@ -12,7 +12,11 @@ services:
 
     # `npm ci` installs from the lockfile, so a deploy resolves the same versions
     # that were tested. `npm run build` builds the client, then bundles the server.
-    buildCommand: npm ci && npm run build
+    #
+    # --include=dev is required, not tidiness: NODE_ENV is production below, which
+    # makes npm omit devDependencies, and vite, vue-tsc and tsup all live there.
+    # Without it the build fails with "vue-tsc: not found".
+    buildCommand: npm ci --include=dev && npm run build
     # Applies pending migrations, then starts the server.
     startCommand: npm start
 
