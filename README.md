@@ -4,7 +4,8 @@ Search recent news, run an LLM over an article you pick to get a summary and a
 sentiment score, and build up a personal digest you can scan by mood.
 
 > **Status:** in progress. This repo is being built as a sequence of reviewable PRs —
-> see [Roadmap](#roadmap).
+> see [Roadmap](#roadmap). Full scope, user flow, API and data model are in
+> [docs/PLAN.md](docs/PLAN.md).
 
 ## Stack
 
@@ -82,7 +83,7 @@ Two free-tier behaviours to be aware of, both expected rather than broken:
 - [x] Workspace scaffold, tooling, local Postgres
 - [x] API contract
 - [x] Database schema, migrations, repositories
-- [ ] GNews + OpenAI providers behind swappable interfaces
+- [x] GNews + OpenAI providers behind swappable interfaces
 - [ ] REST API
 - [ ] Vue 3 client
 - [ ] Deploy + architecture notes

@@ -37,7 +37,6 @@ CREATE TABLE analyses (
   -- as well.
   sentiment       text NOT NULL CHECK (sentiment IN ('positive', 'neutral', 'negative')),
   sentiment_score real NOT NULL CHECK (sentiment_score BETWEEN -1 AND 1),
-  rationale       text NOT NULL,
 
   -- Which model and prompt produced the result, so two versions can be compared.
   model           text NOT NULL,

@@ -40,7 +40,6 @@ function toAnalysis(row: AnalysisWithArticleRow): AnalysisResponse {
     summary: row.summary,
     sentiment: row.sentiment,
     sentimentScore: row.sentimentScore,
-    rationale: row.rationale,
     model: row.model,
     promptVersion: row.promptVersion,
     createdAt: row.createdAt.toISOString(),
@@ -60,7 +59,7 @@ export function createAnalysisRepository(sql: Db): AnalysisRepository {
   // Every read returns the same columns. Listing them explicitly keeps a new
   // internal column from reaching a client by default.
   const columns = sql`
-    a.id, a.summary, a.sentiment, a.sentiment_score, a.rationale,
+    a.id, a.summary, a.sentiment, a.sentiment_score,
     a.model, a.prompt_version, a.created_at,
     ar.url, ar.title, ar.description, ar.content,
     ar.image_url, ar.source_name, ar.published_at
@@ -78,19 +77,18 @@ export function createAnalysisRepository(sql: Db): AnalysisRepository {
        */
       const rows = await sql<{ id: string }[]>`
         INSERT INTO analyses (
-          article_id, summary, sentiment, sentiment_score, rationale,
+          article_id, summary, sentiment, sentiment_score,
           model, prompt_version, tokens_in, tokens_out, latency_ms
         )
         VALUES (
           ${input.articleId}, ${input.summary}, ${input.sentiment}, ${input.sentimentScore},
-          ${input.rationale}, ${input.model}, ${input.promptVersion},
+          ${input.model}, ${input.promptVersion},
           ${input.tokensIn}, ${input.tokensOut}, ${input.latencyMs}
         )
         ON CONFLICT (article_id) DO UPDATE SET
           summary         = EXCLUDED.summary,
           sentiment       = EXCLUDED.sentiment,
           sentiment_score = EXCLUDED.sentiment_score,
-          rationale       = EXCLUDED.rationale,
           model           = EXCLUDED.model,
           prompt_version  = EXCLUDED.prompt_version,
           tokens_in       = EXCLUDED.tokens_in,
