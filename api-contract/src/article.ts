@@ -42,7 +42,10 @@ export const listArticlesQuerySchema = z.object({
    */
   limit: z.coerce.number().int().min(1).max(20).default(10),
 });
-/** Input type: pre-coercion, which is what a caller actually supplies. */
+/**
+ * What a client may send; see the note on `ListAnalysesQuery`. The parsed
+ * counterpart lands with the route that needs it.
+ */
 export type ListArticlesQuery = z.input<typeof listArticlesQuerySchema>;
 
 /**

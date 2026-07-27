@@ -27,7 +27,7 @@ export type Sentiment = z.infer<typeof sentimentSchema>;
  * What the analyzer must return. This is the boundary between "the model said
  * something" and "we are willing to store it".
  *
- * Kept separate from `analysisSchema` because it holds no identity and no
+ * Kept separate from `analysisResponseSchema` because it holds no identity and no
  * provenance — it is a value produced by a model, not a resource that exists.
  */
 export const analysisOutputSchema = z.object({
@@ -48,24 +48,23 @@ export type AnalysisOutput = z.infer<typeof analysisOutputSchema>;
 /* The stored resource                                                         */
 /* -------------------------------------------------------------------------- */
 
-/** A persisted analysis, joined with the article it describes. */
-export const analysisSchema = z.object({
+/**
+ * A persisted analysis: the model's output, plus the identity, provenance and
+ * article that make it a resource rather than a value.
+ *
+ * Extends `analysisOutputSchema` rather than restating its four fields, so the
+ * relationship is stated once and the stored form inherits the same constraints
+ * the model output is held to.
+ */
+export const analysisResponseSchema = analysisOutputSchema.extend({
   id: z.string().uuid(),
   article: articleSchema,
-  summary: z.string(),
-  sentiment: sentimentSchema,
-  sentimentScore: z.number(),
-  rationale: z.string(),
-  /**
-   * Provenance. Without knowing which model and which prompt produced a row,
-   * "did our summaries get better?" is unanswerable — you cannot compare two
-   * populations you cannot distinguish.
-   */
+  /** Provenance: which model and prompt produced this result. */
   model: z.string(),
   promptVersion: z.string(),
   createdAt: z.string().datetime({ offset: true }),
 });
-export type Analysis = z.infer<typeof analysisSchema>;
+export type AnalysisResponse = z.infer<typeof analysisResponseSchema>;
 
 /* -------------------------------------------------------------------------- */
 /* POST /api/v1/analyses                                                       */
@@ -98,24 +97,24 @@ export const listAnalysesQuerySchema = z.object({
   cursor: z.string().optional(),
   sentiment: sentimentSchema.optional(),
 });
+/**
+ * What a client may send. A query string is text, so `limit` may be omitted or
+ * arrive as `"20"` — this is the honest description of what crosses the wire.
+ */
 export type ListAnalysesQuery = z.input<typeof listAnalysesQuerySchema>;
 
 /**
- * Counts across the *whole* feed, not the current page — this drives the mood bar,
- * which would be meaningless if it only described 20 rows.
+ * The same query once validated: coerced, with defaults applied. This is what
+ * server code holds, and `limit` here is a definite number.
+ *
+ * Two names, one schema. Nothing is restated — both are views of
+ * `listAnalysesQuerySchema`, so adding a filter still changes exactly one place.
  */
-export const sentimentBreakdownSchema = z.object({
-  positive: z.number().int().nonnegative(),
-  neutral: z.number().int().nonnegative(),
-  negative: z.number().int().nonnegative(),
-  total: z.number().int().nonnegative(),
-});
-export type SentimentBreakdown = z.infer<typeof sentimentBreakdownSchema>;
+export type ParsedListAnalysesQuery = z.output<typeof listAnalysesQuerySchema>;
 
 export const listAnalysesResponseSchema = z.object({
-  analyses: z.array(analysisSchema),
+  analyses: z.array(analysisResponseSchema),
   /** Null means this is the last page. */
   nextCursor: z.string().nullable(),
-  breakdown: sentimentBreakdownSchema,
 });
 export type ListAnalysesResponse = z.infer<typeof listAnalysesResponseSchema>;
