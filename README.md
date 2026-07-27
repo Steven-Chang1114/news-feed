@@ -93,18 +93,6 @@ Two free-tier behaviours to be aware of, both expected rather than broken:
 then serves the API and that built client from one process. Running those two
 commands locally reproduces the deployed setup exactly.
 
-## What I would do next
-
-- **Cache search results server-side** by `(q, lang, limit)`. The free news tier
-  allows 100 requests a day, and repeat searches currently spend one each.
-- **Evaluate the prompt.** Every analysis stores `model`, `prompt_version`, token
-  counts and latency, which is the data an eval needs; what is missing is a labelled
-  set to score changes against.
-- **Rate-limit `POST /analyses`.** Nothing currently stops a script from spending
-  the OpenAI budget.
-- **Structured logging with the request id.** It is already generated and returned
-  in every error; it is not yet written to a log line.
-
 ## Roadmap
 
 - [x] Workspace scaffold, tooling, local Postgres
