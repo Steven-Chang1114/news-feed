@@ -8,7 +8,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:migrate": "tsx --env-file=../.env src/db/migrate-cli.ts",
-    "dev": "tsx watch --env-file=../.env src/index.ts"
+    "dev": "tsx watch --env-file=../.env src/index.ts",
+    "build": "tsup",
+    "start": "node dist/db/migrate-cli.js && node dist/index.js"
   },
   "dependencies": {
     "@news-feed/api-contract": "*",
@@ -25,6 +27,7 @@
     "@types/node": "^22.10.5",
     "@types/supertest": "^6.0.2",
     "supertest": "^7.0.0",
+    "tsup": "^8.3.5",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "vitest": "^3.0.0"

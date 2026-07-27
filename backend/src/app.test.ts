@@ -1,6 +1,9 @@
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { AnalysisResponse, Article } from '@news-feed/api-contract';
 import request from 'supertest';
-import { describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createApp } from './app';
 import { rateLimitedError, upstreamError } from './errors';
 import type { AnalysisService } from './services/analysisService';
@@ -28,7 +31,11 @@ const analysis: AnalysisResponse = {
 };
 
 function buildApp(
-  overrides: { articleService?: Partial<ArticleService>; analysisService?: Partial<AnalysisService> } = {},
+  overrides: {
+    articleService?: Partial<ArticleService>;
+    analysisService?: Partial<AnalysisService>;
+    staticDir?: string;
+  } = {},
 ) {
   const articleService = {
     search: vi.fn(async () => ({ results: [{ ...article, analysisId: null }] })),
@@ -42,7 +49,14 @@ function buildApp(
     ...overrides.analysisService,
   } as AnalysisService;
 
-  return { app: createApp({ articleService, analysisService, corsOrigin: '*' }), articleService, analysisService };
+  const app = createApp({
+    articleService,
+    analysisService,
+    corsOrigin: '*',
+    ...(overrides.staticDir ? { staticDir: overrides.staticDir } : {}),
+  });
+
+  return { app, articleService, analysisService };
 }
 
 describe('GET /health', () => {
@@ -197,6 +211,56 @@ describe('DELETE /api/v1/analyses/:id', () => {
 
     expect((await request(app).delete('/api/v1/analyses/not-a-uuid')).status).toBe(404);
     expect(analysisService.delete).not.toHaveBeenCalled();
+  });
+});
+
+describe('serving the built client', () => {
+  /**
+   * In production one process serves the API and the client. These tests use a
+   * throwaway directory rather than a real build, so they do not depend on the
+   * frontend having been built.
+   */
+  let staticDir: string;
+
+  beforeAll(async () => {
+    staticDir = await mkdtemp(join(tmpdir(), 'news-feed-static-'));
+    await writeFile(join(staticDir, 'index.html'), '<!doctype html><title>app shell</title>');
+    await writeFile(join(staticDir, 'robots.txt'), 'User-agent: *');
+  });
+
+  afterAll(async () => {
+    await rm(staticDir, { recursive: true, force: true });
+  });
+
+  const appServingStatic = () => buildApp({ staticDir }).app;
+
+  it('serves a real file when one exists', async () => {
+    const response = await request(appServingStatic()).get('/robots.txt');
+
+    expect(response.status).toBe(200);
+    expect(response.text).toContain('User-agent');
+  });
+
+  it('answers a client route with the app shell so a reload works', async () => {
+    const response = await request(appServingStatic()).get('/feed');
+
+    expect(response.status).toBe(200);
+    expect(response.text).toContain('app shell');
+  });
+
+  it('still serves the API rather than the shell', async () => {
+    const response = await request(appServingStatic()).get('/api/v1/analyses');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ analyses: [analysis], nextCursor: null });
+  });
+
+  it('keeps returning JSON for an unknown API path, not HTML', async () => {
+    // A client parsing HTML as JSON reports a syntax error rather than a 404.
+    const response = await request(appServingStatic()).get('/api/v1/nope');
+
+    expect(response.status).toBe(404);
+    expect(response.body.error.code).toBe('NOT_FOUND');
   });
 });
 

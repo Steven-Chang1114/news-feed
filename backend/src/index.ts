@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import OpenAI from 'openai';
 import { createApp } from './app';
 import { env } from './config/env';
@@ -29,6 +30,14 @@ const app = createApp({
     analysisRepo,
   ),
   corsOrigin: env.CORS_ORIGIN,
+  /**
+   * In production this process serves the built client too, so there is one origin
+   * and no CORS. In development Vite serves it and proxies here, so this is unset
+   * and `frontend/dist` need not exist.
+   */
+  ...(env.NODE_ENV === 'production'
+    ? { staticDir: fileURLToPath(new URL('../../frontend/dist/', import.meta.url)) }
+    : {}),
 });
 
 const server = app.listen(env.PORT, () => {

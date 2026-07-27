@@ -1,0 +1,31 @@
+# Render blueprint. One web service serving the API and the built client, so there
+# is a single origin and no CORS in production.
+#
+# The database is not declared here: Render's free Postgres is deleted 30 days after
+# creation, so DATABASE_URL points at Neon instead.
+services:
+  - type: web
+    name: news-feed
+    runtime: node
+    plan: free
+    region: oregon
+
+    # `npm ci` installs from the lockfile, so a deploy resolves the same versions
+    # that were tested. `npm run build` builds the client, then bundles the server.
+    buildCommand: npm ci && npm run build
+    # Applies pending migrations, then starts the server.
+    startCommand: npm start
+
+    healthCheckPath: /health
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # sync: false keeps the value out of the repository — set each in the Render
+      # dashboard, where it is stored encrypted.
+      - key: DATABASE_URL
+        sync: false
+      - key: GNEWS_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
