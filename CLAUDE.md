@@ -168,34 +168,25 @@ objects and internal columns the wire never sees.
 
 **SQL** lives only in `backend/src/db/repositories/`. Never in a route or a service.
 
-**Database handles.** There are two, and the distinction is *"do you open a
-transaction, or just run a query in whatever context you were given?"*
-
-```
-Sql   the connection pool.        Only this has .begin().
-Db    the shared base (ISql).     What every repository takes.
-```
-
-`sql.begin(cb)` does not hand the callback a `Sql` — its signature is
-`cb: (sql: TransactionSql) => …`, and `TransactionSql` has no `.begin()`. So a
-repository is constructed from the pool for a standalone read and from `tx` inside
-a transaction. Neither concrete type accepts both; their base, `ISql`, does.
-
-Inside a `begin` callback **every query must go through `tx`**. A query issued on
-the pool there runs on a *different connection*, commits on its own, and survives
-the rollback — while looking correct, because it sits inside the callback.
-
-**Transaction boundaries** belong to the service layer, which is the only layer that
-knows the whole unit of work. Repositories never open one; routes never see one.
-`analyze` is the only multi-statement operation in the app, so there is exactly one
-`sql.begin` in the codebase. Provider calls stay outside it — never hold a
-transaction open across a network round trip to OpenAI.
+**Transactions** are opened in the service layer only. Repositories take whichever
+handle they are given and never open one; inside a transaction every query must go
+through `tx`, and provider calls stay outside it.
 
 **Comments** carry the reasoning for anything non-obvious — this codebase has to be
-defended out loud, without AI, in the next round.
+defended out loud, without AI, in the next round. State why the code is the way it
+is, in the present tense. Never narrate how a decision was reached, argue against
+alternatives that were considered, or reference reviews and revisions. The same
+applies to every markdown file: they describe the project, not the process of
+building it.
 
 **Scope discipline.** If the brief does not ask for it and no existing code needs it,
 it does not ship.
+
+## Working agreement
+
+**Do not change code unless it is confirmed first.** Propose the change, wait for a
+yes, then write it. This applies to source, tests, schemas and config. Updating
+`CLAUDE.md` and `README.md` when explicitly asked is exempt.
 
 ## Before opening any PR
 
